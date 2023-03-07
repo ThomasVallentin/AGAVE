@@ -33,7 +33,7 @@ public:
     ~SimulationEngine();
 
     void Update(const double& deltaTime);
-    void ComputeIntersections();
+    void ComputeIntersections(Object& object);
     inline std::vector<Object>& GetObjects() { return m_objects; }
     inline const std::vector<Object>& GetObjects() const { return m_objects; }
 

@@ -22,5 +22,39 @@ void SimulationEngine::Update(const double &deltaTime)
         }
 
         obj.update(deltaTime);
+        ComputeIntersections(obj);
+    }
+}
+
+void SimulationEngine::ComputeIntersections(Object &object)
+{
+    if (object.position[c3ga::E1] < -1.1f) {
+        object.position[c3ga::E1] = -1.1f;
+        object.velocity[c3ga::E1] *= -1.0f;
+    }
+    else 
+    if (object.position[c3ga::E1] > 1.1f) {
+        object.position[c3ga::E1] = 1.1f;
+        object.velocity[c3ga::E1] *= -1.0f;
+    }
+
+    if (object.position[c3ga::E2] < -1.1f) {
+        object.position[c3ga::E2] = -1.1f;
+        object.velocity[c3ga::E2] *= -1.0f;
+    }
+    else 
+    if (object.position[c3ga::E2] > 1.1f) {
+        object.position[c3ga::E2] = 1.1f;
+        object.velocity[c3ga::E2] *= -1.0f;
+    }
+
+    if (object.position[c3ga::E3] < -1.1f) {
+        object.position[c3ga::E3] = -1.1f;
+        object.velocity[c3ga::E3] *= -1.0f;
+    }
+    else 
+    if (object.position[c3ga::E3] > 1.1f) {
+        object.position[c3ga::E3] = 1.1f;
+        object.velocity[c3ga::E3] *= -1.0f;
     }
 }

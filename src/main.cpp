@@ -53,15 +53,14 @@ int main(int argc, char* argv[])
 
         camera.OnEvent(event);
     };
+    window.SetEventCallback(eventCallback);
 
-    c3ga::Mvec<double> pt1 = c3ga::point<double>(1, 2, 0.5);
-    std::cout << c3ga::whoAmI(pt1) << std::endl;
-
+    // Fill the scene with points
     SimulationEngine engine;
     auto& objects = engine.GetObjects();
     for (int i = 0 ; i < 100 ; ++i)
     {
-        objects.push_back({c3ga::randomPoint<float>()});
+        objects.push_back({c3ga::randomPoint<float>(), c3ga::randomPoint<float>()});
     }
 
     std::vector<glm::vec3> points(100);
