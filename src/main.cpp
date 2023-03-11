@@ -1,5 +1,5 @@
 #include "Simulation.hpp"
-#include "LayerStack.hpp"
+#include "LayerStackWidget.hpp"
 
 #include "Renderer/Shader.h"
 #include "Renderer/VertexArray.h"
@@ -30,55 +30,6 @@ int main(int argc, char* argv[])
     {
         objects.push_back(c3ga::randomPoint<float>());
     }
-
-    LayerStack stack;
-
-    auto lyr1 = stack.NewLayer("Layer1", objects);
-    auto lyr2 = stack.NewSubset("Layer2", lyr1, 4, 2, Layer::OuterOp);
-    auto lyr3 = stack.NewSubset("Layer3", lyr1, 4, 2, Layer::OuterOp);
-    auto lyr4 = stack.NewCombination("Layer4", lyr2, lyr3, Layer::OuterOp);
-
-    lyr4->Update();
-
-    LOG_INFO("Layer 1 : %d", lyr1->Get().size());
-    for (const auto& obj : *lyr1) {
-        LOG_INFO("%s", c3ga::whoAmI(obj).c_str());
-        obj.display();
-    }
-
-    LOG_INFO("Layer 2 %d", lyr2->Get().size());
-    for (const auto& obj : *lyr2) {
-        LOG_INFO("%s", c3ga::whoAmI(obj).c_str());
-        obj.display();
-    }
-    
-    LOG_INFO("Layer 3 %d", lyr3->Get().size());
-    for (const auto& obj : *lyr3) {
-        LOG_INFO("%s", c3ga::whoAmI(obj).c_str());
-        obj.display();
-    }
-
-    LOG_INFO("Layer 4 %d", lyr4->Get().size());
-    for (const auto& obj : *lyr4) {
-        LOG_INFO("%s", c3ga::whoAmI(obj).c_str());
-        obj.display();
-    }
-
-    // Combination comb1;
-
-
-
-
-
-
-
-
-
-
-
-
-
-    return 0;
 
     // ShaderPtr shader = Shader::Open(resolver.Resolve("resources/shaders/particles.vert"),
     //                                 resolver.Resolve("resources/shaders/particles.frag"));
@@ -125,58 +76,102 @@ int main(int argc, char* argv[])
     // // vao->SetIndexBuffer(ebo);
     // vao->Unbind();
 
-    // double prevTime = window.GetTime();
-    // double currTime;
-    // while (!window.ShouldClose()) {
-    //     currTime = window.GetTime();
+    LayerStackPtr stack = std::make_shared<LayerStack>();
 
-    //     engine.Update(currTime - prevTime);
+    auto lyr1 = stack->NewLayer("Layer1", objects);
+    auto lyr2 = stack->NewSubset("Layer2", lyr1, 4, 2, Layer::OuterOp);
+    auto lyr3 = stack->NewSubset("Layer3", lyr1, 4, 2, Layer::OuterOp);
+    auto lyr4 = stack->NewCombination("Layer4", lyr2, lyr3, Layer::OuterOp);
 
- 	//     vbo->Bind();
-    //     for (int i = 0 ; i < points.size() ; ++i) {
-    //         const auto& object = objects[i];
-    //         points[i] = {object.position[c3ga::E1], object.position[c3ga::E2], object.position[c3ga::E3]};
-    //     }
-    //     vbo->SetData(points.data(), points.size() * sizeof(glm::vec3));
+    // lyr4->Update();
 
-    //     shader->Bind();
-    //     shader->SetMat4("uViewProjMatrix", camera.GetViewProjectionMatrix());
-    //     vao->Bind();
+    LayerStackWidget layerStackWid(stack);
 
-    //     glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
-    //     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    //     glDrawArrays(GL_POINTS, 0, points.size());
+    double prevTime = window.GetTime();
+    double currTime;
+    while (!window.ShouldClose()) {
+        currTime = window.GetTime();
 
-    //     // // Start the Dear ImGui frame
-    //     ImGui_ImplOpenGL3_NewFrame();
-    //     ImGui_ImplGlfw_NewFrame();
-    //     ImGui::NewFrame();
+        // engine.Update(currTime - prevTime);
 
-    //     if (ImGui::IsWindowFocused() || ImGui::IsWindowHovered()) {
-    //         camera.Update();
-    //     }
+ 	    // vbo->Bind();
+        // for (int i = 0 ; i < points.size() ; ++i) {
+        //     const auto& object = objects[i];
+        //     points[i] = {object.position[c3ga::E1], object.position[c3ga::E2], object.position[c3ga::E3]};
+        // }
+        // vbo->SetData(points.data(), points.size() * sizeof(glm::vec3));
 
-    //     ImGui::Begin("Control panel", nullptr);
-    //     {
-    //         if (ImGui::CollapsingHeader("Environment parameters", ImGuiTreeNodeFlags_DefaultOpen))
-    //         {
-    //             // Gravity
-    //             float gravity = 0.0;
-    //             indentedLabel("Gravity");
-    //             ImGui::SameLine();
-    //             ImGui::SliderFloat("##GravitySlider", &gravity, 0.0f, 50.0);
-    //         }
-    //     }
+        // shader->Bind();
+        // shader->SetMat4("uViewProjMatrix", camera.GetViewProjectionMatrix());
+        // vao->Bind();
 
-    //     ImGui::End();
+        glClearColor(0.2f, 0.25f, 0.3f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        // glDrawArrays(GL_POINTS, 0, points.size());
 
-    //     // // Render ImGui items
-    //     ImGui::Render();
-    //     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+        // // Start the Dear ImGui frame
+        ImGui_ImplOpenGL3_NewFrame();
+        ImGui_ImplGlfw_NewFrame();
+        ImGui::NewFrame();
+
+        // if (ImGui::IsWindowFocused() || ImGui::IsWindowHovered()) {
+        //     camera.Update();
+        // }
+
+        // We are using the ImGuiWindowFlags_NoDocking flag to make the parent window not dockable into,
+        // because it would be confusing to have two docking targets within each others.
+        ImGuiWindowFlags windowFlags = ImGuiWindowFlags_NoDocking;
+        const ImGuiViewport* viewport = ImGui::GetMainViewport();
+        ImGui::SetNextWindowPos(viewport->WorkPos);
+        ImGui::SetNextWindowSize(viewport->WorkSize);
+        ImGui::SetNextWindowViewport(viewport->ID);
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+        windowFlags |= ImGuiWindowFlags_NoTitleBar |
+                       ImGuiWindowFlags_NoCollapse |
+                       ImGuiWindowFlags_NoResize |
+                       ImGuiWindowFlags_NoMove |
+                       ImGuiWindowFlags_NoBringToFrontOnFocus |
+                       ImGuiWindowFlags_NoNavFocus | 
+                       ImGuiWindowFlags_NoBackground;
+
+        ImGui::Begin("MainDockSpace", nullptr, windowFlags);
+
+        // Pop the rounding, border & padding style vars set previously
+        ImGui::PopStyleVar(3);
+
+        // Submit the DockSpace
+        ImGuiID dockspace_id = ImGui::GetID("MainDockSpace");
+        static ImGuiDockNodeFlags dockspaceFlags = ImGuiDockNodeFlags_PassthruCentralNode;
+        ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), dockspaceFlags);
+
+        if (ImGui::BeginMainMenuBar())
+        {
+            if (ImGui::BeginMenu("File"))
+            {
+                if(ImGui::MenuItem("Clear context##MainMenuClearAll")) 
+                {
+                    layerStackWid.Clear();
+                }
+
+                ImGui::EndMenu();
+            }
+
+            ImGui::EndMainMenuBar();
+        }
+
+        ImGui::End(); // Main Dockspace
+        ImGui::ShowDemoWindow();
+        layerStackWid.Draw();
+
+        // // Render ImGui items
+        ImGui::Render();
+        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
     	
-    //     window.Update();
-    //     prevTime = currTime;
-    // }
+        window.Update();
+        prevTime = currTime;
+    }
 
-    // return 0;
+    return 0;
 }

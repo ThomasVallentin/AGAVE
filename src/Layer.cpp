@@ -12,8 +12,9 @@
 Layer::Layer(const std::string& name, 
              const MvecArray& objects) :
         m_name(name), 
+        m_visibility(true), 
         m_objects(objects), 
-        m_mapping(new NoMapping())
+        m_mapping(new Copy())
 {
 
 }
@@ -22,6 +23,7 @@ Layer::Layer(const std::string& name,
              const MappingPtr& mapping, 
              const Operator& op) :
         m_name(name), 
+        m_visibility(true), 
         m_mapping(mapping), 
         m_op(op) 
 {
@@ -181,6 +183,24 @@ void Layer::SetDirty(const bool& dirty)
     }
 }
 
+void Layer::SetOperator(const Operator& op)
+{
+    if (m_op != op)
+    {
+        m_op = op;
+        SetDirty(true);
+    }
+}
+
+void Layer::SetMapping(const MappingPtr& mapping)
+{
+    if (m_mapping != mapping)
+    {
+        m_mapping = mapping;
+        SetDirty(true);
+    }
+}
+
 void Layer::Update() 
 {
     LOG_INFO("Start update ! %s", m_name.c_str());
@@ -227,7 +247,7 @@ void Subset::Compute(const Operator& op, Layer& layer)
         return;
     }
 
-    const auto& sourceObjs = sourcePtr->Get(); 
+    const auto& sourceObjs = sourcePtr->GetObjects(); 
     uint32_t count = m_count > 0 ? std::min(sourceObjs.size(), (size_t)m_count) : sourceObjs.size();
     uint32_t indicesCount = count * m_dimension;
 
@@ -245,7 +265,7 @@ void Subset::Compute(const Operator& op, Layer& layer)
         }
     }
 
-    MvecArray& result = layer.Get();
+    MvecArray& result = layer.GetObjects();
     result.resize(count);
 
     // Identity case (no operator)
@@ -300,10 +320,10 @@ void Combination::Compute(const Operator& op, Layer& layer)
         return;
     }
 
-    const auto& sourceObjs1 = sourcePtr1->Get(); 
-    const auto& sourceObjs2 = sourcePtr2->Get(); 
+    const auto& sourceObjs1 = sourcePtr1->GetObjects(); 
+    const auto& sourceObjs2 = sourcePtr2->GetObjects(); 
 
-    auto& result = layer.Get();
+    auto& result = layer.GetObjects();
     result.resize(sourceObjs1.size() * sourceObjs2.size());
 
     uint i=0;

@@ -1,15 +1,5 @@
 #include "LayerStack.hpp"
 
-LayerStack::LayerStack()
-{
-
-}
-
-LayerStack::~LayerStack()
-{
-
-}
-
 LayerPtrArray LayerStack::GetLayers() const
 {
     return m_layers;
@@ -38,6 +28,26 @@ void LayerStack::RemoveLayer(const LayerPtr& layer)
             return layer == other;
         }
     );
+
+    // Disconnect sources
+    for (const auto& src : layer->GetSources())
+    {
+        auto source = src.lock();
+        if (source)
+        {
+            DisconnectLayers(source, layer);
+        }
+    }
+
+    // Disconnect destinations
+    for (const auto& dst : layer->GetDestinations())
+    {
+        auto destination = dst.lock();
+        if (destination)
+        {
+            DisconnectLayers(layer, destination);
+        }
+    }
 
     if (it != m_layers.end())
     {
@@ -99,7 +109,7 @@ void LayerStack::ConnectLayers(const LayerPtr& source, const LayerPtr& destinati
 
 void LayerStack::DisconnectLayers(const LayerPtr& source, const LayerPtr& destination) const
 {
-    destination->AddSource(source);
-    source->AddDestination(destination);
+    destination->RemoveSource(source);
+    source->RemoveDestination(destination);
     destination->SetDirty(true);
 }

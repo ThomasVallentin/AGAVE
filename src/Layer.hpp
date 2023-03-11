@@ -8,13 +8,13 @@
 #include <functional>
 
 using MvecArray = std::vector<c3ga::Mvec<float>>;
-using Operator = std::function<c3ga::Mvec<float>(const c3ga::Mvec<float>&, 
-                                                 const c3ga::Mvec<float>&)>;
+using Operator = c3ga::Mvec<float>(*)(const c3ga::Mvec<float>&, const c3ga::Mvec<float>&);
+
 
 class Layer;
 class Layer;
 class Mapping; 
-class NoMapping; 
+class Copy; 
 class Subset; 
 class Combination;
 
@@ -27,7 +27,6 @@ using MappingPtr = std::shared_ptr<Mapping>;
 using MappingWeakPtr = std::weak_ptr<Mapping>;
 
 
-
 class Layer
 {
 public:
@@ -37,8 +36,8 @@ public:
 
     inline std::string GetName() const { return m_name; }
 
-    inline const MvecArray& Get() const { return m_objects; }
-    inline MvecArray& Get() { return m_objects; }
+    inline const MvecArray& GetObjects() const { return m_objects; }
+    inline MvecArray& GetObjects() { return m_objects; }
     inline void Set(const MvecArray& objects) { m_objects = objects; }
     inline c3ga::Mvec<float>& operator[](const uint32_t& idx) { return m_objects[idx]; }
     inline const c3ga::Mvec<float>& operator[](const uint32_t& idx) const { return m_objects[idx]; }
@@ -58,10 +57,14 @@ public:
     inline bool IsDirty() const { return m_isDirty; }
 
     inline Operator GetOperator() const { return m_op; }
-    void SetOperator(const Operator& op) { m_op = op; }
+    void SetOperator(const Operator& op);
 
     inline MappingPtr GetMapping() const { return m_mapping; }
-    void SetMapping(const MappingPtr& mapping) { m_mapping = mapping; }
+    void SetMapping(const MappingPtr& mapping);
+
+    inline bool IsVisible() const { return m_visibility; }
+    inline bool& GetVisiblity() { return m_visibility; }
+    inline void SetVisiblity(const bool& visibility) { m_visibility = visibility; }
 
     void Update();
 
@@ -83,6 +86,7 @@ public:
 
 private:
     std::string m_name;
+    bool m_visibility;
 
     MvecArray m_objects;
     MappingPtr m_mapping;
@@ -94,25 +98,36 @@ private:
 };
 
 
+enum MappingType
+{
+    NoMapping = 0,
+    CopyMapping,
+    SubsetMapping,
+    CombinationMapping,
+};
 
 class Mapping
 {
 public:
     virtual void Compute(const Operator& op, Layer& layer) = 0;
+    virtual MappingType GetType() const = 0;
+    virtual inline uint32_t GetSourceCount() const { return 0; }
 };
 
-class NoMapping : public Mapping
+class Copy : public Mapping
 {
 public:
-    NoMapping() = default;
+    Copy() = default;
 
     void Compute(const Operator& op, Layer& layer) override {}
+    inline MappingType GetType() const override { return MappingType::CopyMapping; }
+    inline uint32_t GetSourceCount() const override { return 1; }
 };
 
 class Subset : public Mapping
 {
 public:
-    Subset() = default;
+    Subset() : m_dimension(0), m_count(-1) {}
     Subset(const uint32_t& dimension, 
            const int& count=-1) :
             m_dimension(dimension), 
@@ -125,6 +140,8 @@ public:
     inline void SetDimension(const uint8_t& dimension) { m_dimension = dimension; }
 
     void Compute(const Operator& op, Layer& layer) override;
+    inline MappingType GetType() const override { return MappingType::SubsetMapping; }
+    inline uint32_t GetSourceCount() const override { return 1; }
 
 private:
     int m_count;
@@ -140,6 +157,8 @@ public:
     Combination() = default;
 
     void Compute(const Operator& op, Layer& layer) override;
+    inline MappingType GetType() const override { return MappingType::CombinationMapping; }
+    inline uint32_t GetSourceCount() const override { return 2; }
 };
 
 #endif

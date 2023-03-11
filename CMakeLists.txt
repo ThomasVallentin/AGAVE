@@ -19,6 +19,7 @@ file(GLOB_RECURSE SOURCES_FILES "${PROJECT_SOURCE_DIR}/src/**.cpp")
 
 add_executable(GA_Projet 
     ${SOURCES_FILES}
+    ${ImGui_DEMO_SOURCES}
     ${ImGui_SOURCES})
 
 target_include_directories(GA_Projet PUBLIC 

@@ -3,11 +3,16 @@
 
 #include "Layer.hpp"
 
+class LayerStack;
+
+using LayerStackPtr = std::shared_ptr<LayerStack>;
+
+
 class LayerStack
 {
 public:
-    LayerStack();
-    ~LayerStack();
+    LayerStack() = default;
+    ~LayerStack() = default;
 
     LayerPtrArray GetLayers() const;
     void AddLayer(const LayerPtr& layer);
