@@ -1,5 +1,5 @@
 #include "Simulation.hpp"
-#include "Layer.hpp"
+#include "LayerStack.hpp"
 
 #include "Renderer/Shader.h"
 #include "Renderer/VertexArray.h"
@@ -30,13 +30,15 @@ int main(int argc, char* argv[])
     {
         objects.push_back(c3ga::randomPoint<float>());
     }
-    c3ga::Mvec<float> sphere = c3ga::randomPoint<float>() ^ c3ga::randomPoint<float>() ^ c3ga::randomPoint<float>() ^ c3ga::randomPoint<float>();
-    LOG_INFO("%s", c3ga::whoAmI(sphere).c_str());
 
-    LayerPtr lyr1 = std::make_shared<Layer>(objects);
-    LinkPtr sub1 = std::make_shared<Subset>(lyr1, 4, 4, Link::OuterOp);
-    LayerPtr lyr2 = std::make_shared<Layer>();
-    sub1->Update(lyr2);
+    LayerStack stack;
+
+    auto lyr1 = stack.NewLayer("Layer1", objects);
+    auto lyr2 = stack.NewSubset("Layer2", lyr1, 4, 2, Layer::OuterOp);
+    auto lyr3 = stack.NewSubset("Layer3", lyr1, 4, 2, Layer::OuterOp);
+    auto lyr4 = stack.NewCombination("Layer4", lyr2, lyr3, Layer::OuterOp);
+
+    lyr4->Update();
 
     LOG_INFO("Layer 1 : %d", lyr1->Get().size());
     for (const auto& obj : *lyr1) {
@@ -46,6 +48,18 @@ int main(int argc, char* argv[])
 
     LOG_INFO("Layer 2 %d", lyr2->Get().size());
     for (const auto& obj : *lyr2) {
+        LOG_INFO("%s", c3ga::whoAmI(obj).c_str());
+        obj.display();
+    }
+    
+    LOG_INFO("Layer 3 %d", lyr3->Get().size());
+    for (const auto& obj : *lyr3) {
+        LOG_INFO("%s", c3ga::whoAmI(obj).c_str());
+        obj.display();
+    }
+
+    LOG_INFO("Layer 4 %d", lyr4->Get().size());
+    for (const auto& obj : *lyr4) {
         LOG_INFO("%s", c3ga::whoAmI(obj).c_str());
         obj.display();
     }

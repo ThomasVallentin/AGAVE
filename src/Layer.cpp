@@ -1,143 +1,242 @@
 #include "Layer.hpp"
 
+#include "Base/Logging.h"
+
+#include <c3gaTools.hpp>
+
 #include <random>
 
 
 // == Layer ==
 
-void Layer::Invalidate()
+Layer::Layer(const std::string& name, 
+             const MvecArray& objects) :
+        m_name(name), 
+        m_objects(objects), 
+        m_mapping(new NoMapping())
 {
-    for (const auto& dep : m_dependencies)
-    {
-        if (auto ptr = dep.lock())
-        {
-            ptr->Invalidate();
-        }
-    }
+
 }
 
-void Layer::AddDependency(const LinkWeakPtr& link) 
+Layer::Layer(const std::string& name, 
+             const MappingPtr& mapping, 
+             const Operator& op) :
+        m_name(name), 
+        m_mapping(mapping), 
+        m_op(op) 
 {
-    auto ptr = link.lock();
-    if (!ptr)
+
+}
+
+LayerWeakPtrArray Layer::GetSources() const
+{
+    return m_sources;
+}
+
+void Layer::SetSources(const LayerWeakPtrArray& layers)
+{
+    // Remove current layer from old source's destinations
+    for (auto& source : m_sources) {
+        if (auto sourcePtr = source.lock()) {
+            sourcePtr->RemoveDestination(std::shared_ptr<Layer>(this));
+        }
+    }
+
+    // Add current layer to new source's destinations
+    for (auto& layer : layers) {
+        if (auto layerPtr = layer.lock()) {
+            layerPtr->AddDestination(std::shared_ptr<Layer>(this));
+        }
+    }
+
+    m_sources = layers;
+    SetDirty(true);
+}
+
+void Layer::AddSource(const LayerWeakPtr& layer)
+{
+    auto layerPtr = layer.lock();
+    if (!layerPtr) {
+        return;
+    }
+
+    auto it = std::find_if(m_sources.begin(), m_sources.end(),
+        [&layerPtr](const auto& other)
+        {
+            return layerPtr == other.lock();
+        }
+    );
+
+    if (it == m_sources.end())
+    {
+        m_sources.push_back(layer);
+    }
+
+    SetDirty(true);
+}
+
+void Layer::RemoveSource(const LayerWeakPtr& layer)
+{
+    auto layerPtr = layer.lock();
+    if (!layerPtr)
     {
         return;
     }
 
-    auto it = std::find_if(m_dependencies.begin(), m_dependencies.end(),
-        [&ptr](const auto& other)
+    auto it = std::find_if(m_sources.begin(), m_sources.end(),
+        [&layerPtr](const auto& other)
         {
-            return ptr == other.lock();
+            return layerPtr == other.lock();
         }
     );  
-
-    if (it == m_dependencies.end())
+    if (it != m_sources.end())
     {
-        m_dependencies.push_back(link);
+        m_sources.erase(it);
     }
+
+    SetDirty(true);
 }
 
-void Layer::RemoveDependency(const LinkWeakPtr& link)
+LayerWeakPtrArray Layer::GetDestinations() const
 {
-    auto ptr = link.lock();
-    if (!ptr)
+    return m_destinations;
+}
+
+void Layer::SetDestinations(const LayerWeakPtrArray& layers)
+{
+
+    // Remove current layer from old source's destinations
+    for (auto& source : m_sources) {
+        if (auto sourcePtr = source.lock()) {
+            sourcePtr->RemoveDestination(std::shared_ptr<Layer>(this));
+        }
+    }
+
+    // Add current layer to new source's destinations
+    for (auto& layer : layers) {
+        if (auto layerPtr = layer.lock()) {
+            layerPtr->AddDestination(std::shared_ptr<Layer>(this));
+        }
+    }
+
+    m_sources = layers;
+}
+
+void Layer::AddDestination(const LayerWeakPtr& layer)
+{
+    auto layerPtr = layer.lock();
+    if (!layerPtr) {
+        return;
+    }
+
+    auto it = std::find_if(m_destinations.begin(), m_destinations.end(),
+        [&layerPtr](const auto& other)
+        {
+            return layerPtr == other.lock();
+        }
+    );
+
+    if (it == m_sources.end())
+    {
+        m_destinations.push_back(layer);
+    }
+
+}
+
+void Layer::RemoveDestination(const LayerWeakPtr& layer)
+{
+    auto layerPtr = layer.lock();
+    if (!layerPtr)
     {
         return;
     }
 
-    auto it = std::find_if(m_dependencies.begin(), m_dependencies.end(),
-        [&ptr](const auto& other)
+    auto it = std::find_if(m_destinations.begin(), m_destinations.end(),
+        [&layerPtr](const auto& other)
         {
-            return ptr == other.lock();
+            return layerPtr == other.lock();
         }
     );  
-    if (it != m_dependencies.end())
+    if (it != m_destinations.end())
     {
-        m_dependencies.erase(it);
+        m_destinations.erase(it);
     }
 }
 
-// == Link ==
-
-void Link::Invalidate()
+void Layer::SetDirty(const bool& dirty)
 {
-    for (const auto& dep : m_dependencies)
-    {
-        if (auto ptr = dep.lock())
-        {
-            ptr->Invalidate();
-        }
-    }
-}
-
-void Link::AddDependency(const LayerWeakPtr& layer)
-{
-    auto ptr = layer.lock();
-    if (!ptr)
+    bool propagate = dirty && !m_isDirty;
+    m_isDirty = dirty;
+    if (!propagate) 
     {
         return;
     }
 
-    auto it = std::find_if(m_dependencies.begin(), m_dependencies.end(),
-        [&ptr](const auto& other)
-        {
-            return ptr == other.lock();
-        }
-    );  
-
-    if (it == m_dependencies.end())
+    for (const auto& dest : m_destinations)
     {
-        m_dependencies.push_back(layer);
+        if (auto ptr = dest.lock())
+        {
+            ptr->SetDirty(true);
+        }
     }
 }
 
-void Link::RemoveDependency(const LayerWeakPtr& layer)
+void Layer::Update() 
 {
-    auto ptr = layer.lock();
-    if (!ptr)
+    LOG_INFO("Start update ! %s", m_name.c_str());
+    if (!m_isDirty)
     {
+        LOG_INFO("Already updated ! %s", m_name.c_str());
         return;
     }
 
-    auto it = std::find_if(m_dependencies.begin(), m_dependencies.end(),
-        [&ptr](const auto& other)
-        {
-            return ptr == other.lock();
-        }
-    );  
-    
-    if (it != m_dependencies.end())
+    if (!m_mapping)
     {
-        m_dependencies.erase(it);
+        m_objects.clear();
+        m_isDirty = false;
+        return;
     }
+
+
+    for (auto& sourcePtr : m_sources) {
+        auto source = sourcePtr.lock();
+        if (source)
+        {
+            source->Update();  
+        }
+    }
+
+    LOG_INFO("Update ! %s", m_name.c_str());
+    m_mapping->Compute(m_op, *this);
+    SetDirty(false);
 }
 
 // == Subset ==
 
-void Subset::Invalidate() 
+void Subset::Compute(const Operator& op, Layer& layer) 
 {
-    m_indices.clear();
-    Link::Invalidate();
-}
+    auto sources = layer.GetSources();
+    LayerPtr sourcePtr = nullptr;
+    for (uint i = 0 ; i < sources.size() & !sourcePtr ; ++i) {
+        sourcePtr = sources[i].lock();
+    }
 
-void Subset::Update(const LayerPtr& destination) 
-{
-    if (!m_count || !m_dimension || !m_source)
+    if (!m_count || !m_dimension || !sourcePtr)
     {
-        destination->Clear();
+        layer.Clear();
         return;
     }
 
-    const auto& source = m_source->Get(); 
-    uint32_t count = m_count > 0 ? std::min(source.size(), (size_t)m_count) : source.size();
+    const auto& sourceObjs = sourcePtr->Get(); 
+    uint32_t count = m_count > 0 ? std::min(sourceObjs.size(), (size_t)m_count) : sourceObjs.size();
     uint32_t indicesCount = count * m_dimension;
 
-    if (m_indices.empty())
+    if (m_indices.empty() || indicesCount != m_indices.size())
     {
         // Generate random samples
         std::random_device device;
         std::mt19937 engine(device());
-        std::uniform_int_distribution<uint32_t> distrib(0, source.size() - 1);
+        std::uniform_int_distribution<uint32_t> distrib(0, sourceObjs.size() - 1);
 
         m_indices.reserve(indicesCount);
         for (uint i=0 ; i < indicesCount ; ++i)
@@ -146,71 +245,75 @@ void Subset::Update(const LayerPtr& destination)
         }
     }
 
-    MvecArray& dest = destination->Get();
-    dest.resize(count);
+    MvecArray& result = layer.Get();
+    result.resize(count);
 
     // Identity case (no operator)
-    if (!m_op)
+    if (!op)
     {
-        dest.clear();
+        result.resize(count);
         for (uint32_t i=0 ; i < count ; ++i)
         {
-            dest.push_back(source[i]);
+            result[i] = sourceObjs[i];
         }
+
         return;
     }
 
     // Apply operator for each count for each "dimension"
     uint idx = 0;
-    for (auto& obj : dest)
+    for (auto& obj : result)
     {
-        obj = source[m_indices[idx]];
-
+        obj = sourceObjs[m_indices[idx]];
+        std::cout << m_indices[idx] << " ";
         for (uint i=0 ; i < m_dimension - 1 ; ++i)
         {
             ++idx;
-            obj = m_op(obj, source[m_indices[idx]]);
+            obj = op(obj, sourceObjs[m_indices[idx]]);
+            std::cout << m_indices[idx] << " ";
         }
+        std::cout << c3ga::whoAmI(obj) << std::endl;
+        
     }
 }
 
 // == Combination ==
 
-void Combination::Update(const LayerPtr& destination) 
+void Combination::Compute(const Operator& op, Layer& layer) 
 {
-    if (!m_source1 || !m_source2)
+    auto sources = layer.GetSources();
+    LayerPtr sourcePtr1;
+    LayerPtr sourcePtr2;
+    for (uint i = 0 ; i < sources.size() && !(sourcePtr1 && sourcePtr2) ; ++i) {
+        std::cout << i << " " << sources.size() << std::endl;
+        if (!sourcePtr1) {
+            sourcePtr1 = sources[i].lock();
+        } else {
+            sourcePtr2 = sources[i].lock();
+        }
+    }
+
+    if (!sourcePtr1 || !sourcePtr2 || !op)
     {
-        destination->Clear();
+        LOG_INFO("clear %d %d", sourcePtr1.get(), sourcePtr2.get());
+        layer.Clear();
         return;
     }
 
-    MvecArray result;
-    const auto& source1 = m_source1->Get(); 
-    const auto& source2 = m_source2->Get(); 
+    const auto& sourceObjs1 = sourcePtr1->Get(); 
+    const auto& sourceObjs2 = sourcePtr2->Get(); 
 
-    result.reserve(source1.size() * source2.size());
+    auto& result = layer.Get();
+    result.resize(sourceObjs1.size() * sourceObjs2.size());
 
     uint i=0;
-    for (const auto& s1 : source1)
+    for (const auto& s1 : sourceObjs1)
     {
-        for (const auto& s2 : source2)
+        for (const auto& s2 : sourceObjs2)
         {
-            result[i] = m_op(s1, s2);
+            result[i] = op(s1.dual(), s2.dual()).dual();
             ++i;
         }
     }
 }
 
-
-void Combination::SetSources(const LayerPtr& source1,
-                             const LayerPtr& source2)
-{ 
-    m_source1 = source1; 
-    m_source2 = source2; 
-}
-
-void Combination::SetSources(const LayerPair& sources)
-{ 
-    m_source1 = sources.first; 
-    m_source2 = sources.second; 
-}

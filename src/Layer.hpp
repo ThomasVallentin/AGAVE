@@ -12,22 +12,30 @@ using Operator = std::function<c3ga::Mvec<float>(const c3ga::Mvec<float>&,
                                                  const c3ga::Mvec<float>&)>;
 
 class Layer;
-class Link; 
+class Layer;
+class Mapping; 
+class NoMapping; 
 class Subset; 
 class Combination;
 
 using LayerPtr = std::shared_ptr<Layer>;
 using LayerWeakPtr = std::weak_ptr<Layer>;
-using LinkPtr = std::shared_ptr<Link>;
-using LinkWeakPtr = std::weak_ptr<Link>;
+using LayerPtrArray = std::vector<LayerPtr>;
+using LayerWeakPtrArray = std::vector<LayerWeakPtr>;
+
+using MappingPtr = std::shared_ptr<Mapping>;
+using MappingWeakPtr = std::weak_ptr<Mapping>;
+
 
 
 class Layer
 {
 public:
-    Layer() = default;
-    Layer(const MvecArray& objects) : m_objects(objects) {}
+    Layer(const std::string& name, const MvecArray& objects);
+    Layer(const std::string& name, const MappingPtr& mapping, const Operator& op);
     ~Layer() = default;
+
+    inline std::string GetName() const { return m_name; }
 
     inline const MvecArray& Get() const { return m_objects; }
     inline MvecArray& Get() { return m_objects; }
@@ -36,9 +44,26 @@ public:
     inline const c3ga::Mvec<float>& operator[](const uint32_t& idx) const { return m_objects[idx]; }
     inline void Clear() { m_objects.clear(); }
 
-    void AddDependency(const LinkWeakPtr& link);
-    void RemoveDependency(const LinkWeakPtr& link);
-    void Invalidate();
+    LayerWeakPtrArray GetSources() const;
+    virtual void SetSources(const LayerWeakPtrArray& layers);
+    virtual void AddSource(const LayerWeakPtr& layer);
+    virtual void RemoveSource(const LayerWeakPtr& layer);
+
+    LayerWeakPtrArray GetDestinations() const;
+    virtual void SetDestinations(const LayerWeakPtrArray& layers);
+    virtual void AddDestination(const LayerWeakPtr& layer);
+    virtual void RemoveDestination(const LayerWeakPtr& layer);
+
+    void SetDirty(const bool& dirty);
+    inline bool IsDirty() const { return m_isDirty; }
+
+    inline Operator GetOperator() const { return m_op; }
+    void SetOperator(const Operator& op) { m_op = op; }
+
+    inline MappingPtr GetMapping() const { return m_mapping; }
+    void SetMapping(const MappingPtr& mapping) { m_mapping = mapping; }
+
+    void Update();
 
     inline MvecArray::iterator begin()             { return m_objects.begin(); }
     inline MvecArray::iterator end()               { return m_objects.end(); }
@@ -47,25 +72,8 @@ public:
 
     inline bool operator==(const Layer& other) { return true; }
 
-private:
-    MvecArray m_objects;
-    std::vector<LinkWeakPtr> m_dependencies;
-};
-
-
-class Link
-{
 public:
-    Link(const Operator& op=nullptr) : m_op(op) {}
-
-    inline Operator GetOperator(const Operator& op) { return m_op; }
-    inline void SetOperator(const Operator& op) { m_op = op; }
-    virtual void Update(const LayerPtr& destination) = 0;
-
-    void AddDependency(const LayerWeakPtr& layer);
-    void RemoveDependency(const LayerWeakPtr& layer);
-    virtual void Invalidate();
-
+    // Operators
     inline static c3ga::Mvec<float> InnerOp(const c3ga::Mvec<float>& first, 
                                             const c3ga::Mvec<float>& second) { return first | second; }
     inline static c3ga::Mvec<float> OuterOp(const c3ga::Mvec<float>& first, 
@@ -73,24 +81,40 @@ public:
     inline static c3ga::Mvec<float> GeomOp(const c3ga::Mvec<float>& first, 
                                            const c3ga::Mvec<float>& second) { return first * second; }
 
-    inline bool operator==(const Link& other) { return true; }
+private:
+    std::string m_name;
 
-protected:
+    MvecArray m_objects;
+    MappingPtr m_mapping;
     Operator m_op;
-    std::vector<LayerWeakPtr> m_dependencies;
+
+    LayerWeakPtrArray m_sources;
+    LayerWeakPtrArray m_destinations;
+    bool m_isDirty = true;
 };
 
 
-class Subset : public Link
+
+class Mapping
 {
 public:
-    Subset() : Link() {};
-    Subset(const LayerPtr& source,
-           const uint32_t& dimension, 
-           const int& count=-1, 
-           const Operator& op=nullptr) :
-            Link(op), 
-            m_source(source), 
+    virtual void Compute(const Operator& op, Layer& layer) = 0;
+};
+
+class NoMapping : public Mapping
+{
+public:
+    NoMapping() = default;
+
+    void Compute(const Operator& op, Layer& layer) override {}
+};
+
+class Subset : public Mapping
+{
+public:
+    Subset() = default;
+    Subset(const uint32_t& dimension, 
+           const int& count=-1) :
             m_dimension(dimension), 
             m_count(count) {}
 
@@ -100,12 +124,9 @@ public:
     inline uint8_t GetDimension() const { return m_dimension; }
     inline void SetDimension(const uint8_t& dimension) { m_dimension = dimension; }
 
-    void Update(const LayerPtr& destination) override;
-    void Invalidate() override;
+    void Compute(const Operator& op, Layer& layer) override;
 
 private:
-    LayerPtr m_source;
-
     int m_count;
     uint32_t m_dimension;
 
@@ -113,30 +134,12 @@ private:
 };
 
 
-class Combination : public Link
+class Combination : public Mapping
 {
 public:
-    Combination() : Link() {};
-    Combination(const LayerPtr& source1,
-                const LayerPtr& source2, 
-                const Operator& op=nullptr) :
-            Link(op), 
-            m_source1(source1), 
-            m_source2(source2) {}
+    Combination() = default;
 
-    using LayerPair = std::pair<LayerPtr, LayerPtr>;
-
-    inline LayerPair GetSources() const { return {m_source1, m_source2}; }
-    void SetSources(const LayerPair& sources);
-    void SetSources(const LayerPtr& source1,
-                    const LayerPtr& source2);
-
-
-    void Update(const LayerPtr& destination) override;
-
-private:
-    LayerPtr m_source1;
-    LayerPtr m_source2;
+    void Compute(const Operator& op, Layer& layer) override;
 };
 
 #endif
