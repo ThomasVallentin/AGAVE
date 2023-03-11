@@ -16,7 +16,7 @@ public:
     void DeleteSelectedLayers();
     void Clear();
 
-    void Draw();
+    bool Draw();
 
     LayerPtrArray &GetSelection();
     bool IsSelected(const LayerPtr &layer) const;
@@ -25,8 +25,8 @@ public:
     void ClearSelection();
 
 private:
-    void DrawLayer(const LayerPtr& layer, const int& index);
-    void DrawMapping(const LayerPtr& layer, 
+    bool DrawLayer(const LayerPtr& layer, const int& index);
+    bool DrawMapping(const LayerPtr& layer, 
                      const bool& isSelected, 
                      const bool& isSource);
     

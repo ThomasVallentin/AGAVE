@@ -3,6 +3,7 @@
 
 #include "Renderer/Shader.h"
 #include "Renderer/VertexArray.h"
+#include "Renderer/Renderer.hpp"
 
 #include "Base/Camera.h"
 #include "Base/Window.h"
@@ -30,51 +31,23 @@ int main(int argc, char* argv[])
     {
         objects.push_back(c3ga::randomPoint<float>());
     }
-
-    // ShaderPtr shader = Shader::Open(resolver.Resolve("resources/shaders/particles.vert"),
-    //                                 resolver.Resolve("resources/shaders/particles.frag"));
-    // shader->Bind();
     
-    // Camera camera(50.0f, 1280.0f / 720.0f, 0.1f, 10000.0f);
+    Camera camera(50.0f, 1280.0f / 720.0f, 0.1f, 10000.0f);
 
-    // auto eventCallback = [&](Event* event) {
-    //     switch (event->GetType()) 
-    //     {
-    //         case EventType::WindowResized: {
-    //             auto resizeEvent = dynamic_cast<WindowResizedEvent*>(event);
-    //             glViewport(0, 0, resizeEvent->GetWidth(), resizeEvent->GetHeight());
-    //             camera.SetViewportSize(resizeEvent->GetWidth(), resizeEvent->GetHeight());
-    //             break;
-    //         }
-    //     }
+    auto eventCallback = [&](Event* event) {
+        switch (event->GetType()) 
+        {
+            case EventType::WindowResized: {
+                auto resizeEvent = dynamic_cast<WindowResizedEvent*>(event);
+                glViewport(0, 0, resizeEvent->GetWidth(), resizeEvent->GetHeight());
+                camera.SetViewportSize(resizeEvent->GetWidth(), resizeEvent->GetHeight());
+                break;
+            }
+        }
 
-    //     camera.OnEvent(event);
-    // };
-    // window.SetEventCallback(eventCallback);
-
-    // // Fill the scene with points
-    // SimulationEngine engine;
-    // auto& objects = engine.GetObjects();
-    // for (int i = 0 ; i < 100 ; ++i)
-    // {
-    //     objects.push_back({c3ga::randomPoint<float>(), c3ga::randomPoint<float>()});
-    // }
-
-    // std::vector<glm::vec3> points(100);
-    // for (int i = 0 ; i < points.size() ; ++i) {
-    //     const auto& object = objects[i];
-    //     points[i] = {object.position[c3ga::E1], object.position[c3ga::E2], object.position[c3ga::E3]};
-    // }
-    // VertexBufferPtr vbo = VertexBuffer::Create(points.data(), 
-    //                                            points.size() * sizeof(glm::vec3));
-    // VertexBufferLayout layout = {{"Position", 3, GL_FLOAT, false}};
-    // vbo->SetLayout(layout);
-
-    // VertexArrayPtr vao = VertexArray::Create();
-    // vao->Bind();
-    // vao->AddVertexBuffer(vbo);
-    // // vao->SetIndexBuffer(ebo);
-    // vao->Unbind();
+        camera.OnEvent(event);
+    };
+    window.SetEventCallback(eventCallback);
 
     LayerStackPtr stack = std::make_shared<LayerStack>();
 
@@ -83,12 +56,13 @@ int main(int argc, char* argv[])
     auto lyr3 = stack->NewSubset("Layer3", lyr1, 4, 2, Layer::OuterOp);
     auto lyr4 = stack->NewCombination("Layer4", lyr2, lyr3, Layer::OuterOp);
 
-    // lyr4->Update();
+    Renderer renderer;
 
     LayerStackWidget layerStackWid(stack);
 
     double prevTime = window.GetTime();
     double currTime;
+    bool somethingChanged = false;
     while (!window.ShouldClose()) {
         currTime = window.GetTime();
 
@@ -105,18 +79,30 @@ int main(int argc, char* argv[])
         // shader->SetMat4("uViewProjMatrix", camera.GetViewProjectionMatrix());
         // vao->Bind();
 
+        // Update all the visible layers
+        for (const auto& layer : stack->GetLayers())
+        {
+            if (layer->IsVisible()) {
+                somethingChanged |= layer->Update();
+            }
+        }
+
+        camera.Update();
+
         glClearColor(0.2f, 0.25f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        // glDrawArrays(GL_POINTS, 0, points.size());
+        if (somethingChanged) {
+            renderer.Invalidate();
+        }
+        renderer.Render(stack, camera.GetViewProjectionMatrix());
+
+        // Reset the invalidation variable 
+        somethingChanged = false;
 
         // // Start the Dear ImGui frame
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
-
-        // if (ImGui::IsWindowFocused() || ImGui::IsWindowHovered()) {
-        //     camera.Update();
-        // }
 
         // We are using the ImGuiWindowFlags_NoDocking flag to make the parent window not dockable into,
         // because it would be confusing to have two docking targets within each others.
@@ -163,7 +149,7 @@ int main(int argc, char* argv[])
 
         ImGui::End(); // Main Dockspace
         ImGui::ShowDemoWindow();
-        layerStackWid.Draw();
+        somethingChanged |= layerStackWid.Draw();
 
         // // Render ImGui items
         ImGui::Render();

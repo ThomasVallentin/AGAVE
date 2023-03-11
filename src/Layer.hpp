@@ -66,7 +66,7 @@ public:
     inline bool& GetVisiblity() { return m_visibility; }
     inline void SetVisiblity(const bool& visibility) { m_visibility = visibility; }
 
-    void Update();
+    bool Update();
 
     inline MvecArray::iterator begin()             { return m_objects.begin(); }
     inline MvecArray::iterator end()               { return m_objects.end(); }

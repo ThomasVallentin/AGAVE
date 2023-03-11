@@ -32,18 +32,17 @@ void VertexArray::AddVertexBuffer(std::shared_ptr<VertexBuffer> &vertexBuffer)
     glBindVertexArray(m_id);
     vertexBuffer->Bind();
 
-    GLuint i = 0;
     const auto& layout = vertexBuffer->GetLayout();
     for (const auto& attribute : layout.GetAttributes()) {
-        glVertexAttribPointer(i, 
+        glVertexAttribPointer(m_attributeCount, 
                               attribute.dimension, 
                               attribute.type, 
                               attribute.normalized, 
                               layout.GetStride(), 
                               (const void*)attribute.offset);
-        glEnableVertexAttribArray(i);
+        glEnableVertexAttribArray(m_attributeCount);
 
-        i++;
+        m_attributeCount++;
     }
 
     m_vertexBuffers.push_back(vertexBuffer);

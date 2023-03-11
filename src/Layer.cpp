@@ -201,20 +201,18 @@ void Layer::SetMapping(const MappingPtr& mapping)
     }
 }
 
-void Layer::Update() 
+bool Layer::Update() 
 {
-    LOG_INFO("Start update ! %s", m_name.c_str());
     if (!m_isDirty)
     {
-        LOG_INFO("Already updated ! %s", m_name.c_str());
-        return;
+        return false;
     }
 
     if (!m_mapping)
     {
         m_objects.clear();
         m_isDirty = false;
-        return;
+        return false;
     }
 
 
@@ -226,9 +224,10 @@ void Layer::Update()
         }
     }
 
-    LOG_INFO("Update ! %s", m_name.c_str());
     m_mapping->Compute(m_op, *this);
     SetDirty(false);
+
+    return true;
 }
 
 // == Subset ==
@@ -315,7 +314,6 @@ void Combination::Compute(const Operator& op, Layer& layer)
 
     if (!sourcePtr1 || !sourcePtr2 || !op)
     {
-        LOG_INFO("clear %d %d", sourcePtr1.get(), sourcePtr2.get());
         layer.Clear();
         return;
     }

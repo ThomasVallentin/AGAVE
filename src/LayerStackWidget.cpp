@@ -47,7 +47,7 @@ void LayerStackWidget::Clear()
     ClearSelection();
 }
 
-void LayerStackWidget::Draw() 
+bool LayerStackWidget::Draw() 
 {
     ImGui::Begin("Layer Stack", nullptr, ImGuiWindowFlags_MenuBar);
 
@@ -103,8 +103,10 @@ void LayerStackWidget::Draw()
     ImGui::End();
 }
 
-void LayerStackWidget::DrawLayer(const LayerPtr& layer, const int& index)
+bool LayerStackWidget::DrawLayer(const LayerPtr& layer, const int& index)
 {
+    bool somethingChanged = false;
+
     const std::string layerName = layer->GetName();
     ImGuiTreeNodeFlags nodeFlags = (ImGuiTreeNodeFlags_FramePadding |
                                     ImGuiTreeNodeFlags_Framed |
@@ -140,6 +142,7 @@ void LayerStackWidget::DrawLayer(const LayerPtr& layer, const int& index)
         if (ImGui::MenuItem("Delete selected layer", "Suppr"))
         {
             DeleteSelectedLayers();
+            somethingChanged = true;
         }
 
         ImGui::EndPopup();
@@ -155,7 +158,7 @@ void LayerStackWidget::DrawLayer(const LayerPtr& layer, const int& index)
     bool toggled = ImGui::Checkbox((std::string("##VisibilityCBox") + layerName).c_str(), 
                                    &layer->GetVisiblity(),
                                    ImGuiButtonFlags_PressedOnClick);
-
+    somethingChanged |= toggled;
     ImGui::PopStyleColor(2);
     ImGui::PopStyleVar();
 
@@ -203,9 +206,11 @@ void LayerStackWidget::DrawLayer(const LayerPtr& layer, const int& index)
 
     // Draw the extended data if the item is expanded
     if (opened) {
-        DrawMapping(layer, isSelected, isSource);
+        somethingChanged |= DrawMapping(layer, isSelected, isSource);
         ImGui::TreePop();
     }
+
+    return somethingChanged;
 }
 
 
@@ -255,8 +260,10 @@ bool DrawMappingComboBox(const LayerPtr& layer)
 }
 
 
-void DrawOperatorComboBox(const LayerPtr& layer)
+bool DrawOperatorComboBox(const LayerPtr& layer)
 {
+    bool somethingChanged = false;
+
     auto indexFromOperator = [](const Operator& op)->uint32_t {
         if (!op) {
             return 0;
@@ -270,7 +277,6 @@ void DrawOperatorComboBox(const LayerPtr& layer)
             return 4;
         }
     };
-
     const char* opNames[] = {"No operator",
                              "Outer product",
                              "Inner product",
@@ -291,6 +297,7 @@ void DrawOperatorComboBox(const LayerPtr& layer)
 
             if (ImGui::Selectable(opNames[i], selected, flags)) {
                 layer->SetOperator(operators[i]);
+                somethingChanged = true;
             }
 
             if (selected)
@@ -299,6 +306,8 @@ void DrawOperatorComboBox(const LayerPtr& layer)
 
         ImGui::EndCombo();
     }
+
+    return somethingChanged;
 }
 
 bool DrawSourceComboBox(const LayerPtrArray& layers, const LayerPtr& currentLayer, LayerWeakPtr& source, int index)
@@ -331,18 +340,20 @@ bool DrawSourceComboBox(const LayerPtrArray& layers, const LayerPtr& currentLaye
 }
 
 
-void LayerStackWidget::DrawMapping(const LayerPtr& layer, 
+bool LayerStackWidget::DrawMapping(const LayerPtr& layer, 
                                    const bool& isSelected, 
                                    const bool& isSource)
 {
     const auto& layers = m_layerStack->GetLayers();
     auto sources = layer->GetSources();
 
+    bool somethingChanged;
+
     // Mapping
     ImGui::AlignTextToFramePadding();
     ImGui::Text("Mapping :");
     ImGui::SameLine();
-    if (DrawMappingComboBox(layer)) {
+    if (somethingChanged = DrawMappingComboBox(layer)) {
         UpdateSources();
     }
 
@@ -409,11 +420,15 @@ void LayerStackWidget::DrawMapping(const LayerPtr& layer,
         }
     }
 
+    somethingChanged || sourcesChanged;
+
     // Operator
     ImGui::AlignTextToFramePadding();
     ImGui::Text("Operator :");            
     ImGui::SameLine();
-    DrawOperatorComboBox(layer);
+    somethingChanged |= DrawOperatorComboBox(layer);
+
+    return somethingChanged;
 }
 
 LayerPtrArray& LayerStackWidget::GetSelection() 

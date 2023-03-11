@@ -42,6 +42,7 @@ private:
     VertexBufferVector m_vertexBuffers;
     std::shared_ptr<IndexBuffer> m_indexBuffer;
 
+    GLuint m_attributeCount = 0;
     GLuint m_id = 0;
 };
 
