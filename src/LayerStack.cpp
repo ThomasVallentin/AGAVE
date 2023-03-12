@@ -69,14 +69,14 @@ LayerPtr LayerStack::NewLayer(const std::string& name,
     return layer;
 }
 
-LayerPtr LayerStack::NewSubset(const std::string& name,
+LayerPtr LayerStack::NewSelfCombination(const std::string& name,
                                const LayerPtr& source, 
                                const uint32_t& dimension, 
                                const int& count,
                                const Operator& op)
 {
-    ProviderPtr subset = std::make_shared<Subset>(dimension, count);
-    LayerPtr layer = std::make_shared<Layer>(name, subset, op);
+    ProviderPtr provider = std::make_shared<SelfCombination>(dimension, count, op);
+    LayerPtr layer = std::make_shared<Layer>(name, provider);
     layer->AddSource(source);
     source->AddDestination(layer);
     m_layers.push_back(layer);
@@ -89,8 +89,8 @@ LayerPtr LayerStack::NewCombination(const std::string& name,
                                     const LayerPtr& source2,
                                     const Operator& op)
 {
-    ProviderPtr combination = std::make_shared<Combination>();
-    LayerPtr layer = std::make_shared<Layer>(name, combination, op);
+    ProviderPtr combination = std::make_shared<Combination>(op);
+    LayerPtr layer = std::make_shared<Layer>(name, combination);
     layer->AddSource(source1);
     layer->AddSource(source2);
     source1->AddDestination(layer);

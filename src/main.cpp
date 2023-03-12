@@ -49,7 +49,7 @@ int main(int argc, char* argv[])
     auto lyr1 = stack->NewLayer("Layer1", objects);
     objects = {c3ga::dualSphere<double>(0, 1, 0, 1).dual()};
     auto lyr2 = stack->NewLayer("Layer2", objects);
-    auto lyr3 = stack->NewCombination("Layer3", lyr1, lyr2, Layer::OuterOp);
+    auto lyr3 = stack->NewCombination("Layer3", lyr1, lyr2, Operators::OuterProduct);
 
     Renderer renderer;
 

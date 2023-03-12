@@ -15,18 +15,16 @@ Layer::Layer(const std::string& name,
         m_name(name), 
         m_visibility(true), 
         m_objects(objects), 
-        m_provider(new Copy())
+        m_provider(new Static())
 {
 
 }
 
 Layer::Layer(const std::string& name, 
-             const ProviderPtr& provider, 
-             const Operator& op) :
+             const ProviderPtr& provider) :
         m_name(name), 
         m_visibility(true), 
-        m_provider(provider), 
-        m_op(op) 
+        m_provider(provider) 
 {
 
 }
@@ -184,15 +182,6 @@ void Layer::SetDirty(const bool& dirty)
     }
 }
 
-void Layer::SetOperator(const Operator& op)
-{
-    if (m_op != op)
-    {
-        m_op = op;
-        SetDirty(true);
-    }
-}
-
 void Layer::SetProvider(const ProviderPtr& provider)
 {
     if (m_provider != provider)
@@ -225,14 +214,41 @@ bool Layer::Update()
         }
     }
 
-    m_provider->Compute(m_op, *this);
+    m_provider->Compute(*this);
     SetDirty(false);
 
     return true;
 }
 
-// == Subset ==
+// == OperatorBasedProvider
 
+void OperatorBasedProvider::SetOperator(const Operator& op)
+{
+    if (m_op != op)
+        m_op = op;
+}
+
+// Subset
+
+void Subset::Compute(Layer& layer)
+{
+    auto sources = layer.GetSources();
+    if (!m_count || sources.empty())
+    {
+        layer.Clear();
+        return;
+    }
+
+    const auto source = sources[0].lock();
+    const auto& sourceObjs = source->GetObjects();
+
+    uint32_t count = m_count < 0 ? sourceObjs.size() : std::min((size_t)m_count, sourceObjs.size());
+
+    auto& objects = layer.GetObjects();
+    objects = MvecArray(sourceObjs.begin(), sourceObjs.begin() + count);
+}
+
+// == SelfCombination ==
 
 // Get all order independent combinations of integers.
 // This code is adapted from https://rosettacode.org/wiki/Combinations
@@ -256,17 +272,17 @@ std::vector<std::vector<uint32_t>> GetIntegerCombinations(const uint32_t& maxInd
     return result;
 }
 
-void Subset::Compute(const Operator& op, Layer& layer) 
+void SelfCombination::Compute(Layer& layer) 
 {
-
     auto sources = layer.GetSources();
+    auto op = GetOperator();
     if (!m_count || !m_dimension || !op || sources.empty())
     {
         layer.Clear();
         return;
     }
 
-    const auto& source = sources[0].lock();
+    const auto source = sources[0].lock();
     const auto& sourceObjs = source->GetObjects(); 
     uint32_t sourceObjCount = sourceObjs.size();
 
@@ -285,7 +301,7 @@ void Subset::Compute(const Operator& op, Layer& layer)
         auto combinations = GetIntegerCombinations(sourceObjs.size(), m_dimension);
         std::shuffle(combinations.begin(), combinations.end(), engine);
 
-        outObjCount = m_count > 0 ? std::min((size_t)m_count, combinations.size()) : combinations.size();
+        outObjCount = m_count < 0 ? combinations.size() : std::min((size_t)m_count, combinations.size());
         m_indices.reserve(outObjCount * m_dimension);
         for (uint i=0 ; i < outObjCount ; ++i)
         {
@@ -300,15 +316,10 @@ void Subset::Compute(const Operator& op, Layer& layer)
     for (auto& obj : result)
     {
         obj = sourceObjs[m_indices[idx]];
-        std::cout << m_indices[idx] << " ";
-        for (uint i=0 ; i < m_dimension - 1 ; ++i)
-        {
+        for (uint i=0 ; i < m_dimension - 1 ; ++i) {
             ++idx;
             obj = op(obj, sourceObjs[m_indices[idx]]);
-            std::cout << m_indices[idx] << " ";
         }
-        std::cout << c3ga::whoAmI(obj) << std::endl;
-
     }
 
     m_prevCount = m_count;
@@ -318,25 +329,19 @@ void Subset::Compute(const Operator& op, Layer& layer)
 
 // == Combination ==
 
-void Combination::Compute(const Operator& op, Layer& layer) 
+void Combination::Compute(Layer& layer) 
 {
     auto sources = layer.GetSources();
-    LayerPtr sourcePtr1;
-    LayerPtr sourcePtr2;
-    for (uint i = 0 ; i < sources.size() && !(sourcePtr1 && sourcePtr2) ; ++i) {
-        std::cout << i << " " << sources.size() << std::endl;
-        if (!sourcePtr1) {
-            sourcePtr1 = sources[i].lock();
-        } else {
-            sourcePtr2 = sources[i].lock();
-        }
-    }
 
-    if (!sourcePtr1 || !sourcePtr2 || !op)
+    auto op = GetOperator();
+    if (sources.size() < 2 || !op)
     {
         layer.Clear();
         return;
     }
+    
+    LayerPtr sourcePtr1 = sources[0].lock();
+    LayerPtr sourcePtr2 = sources[1].lock();
 
     const auto& sourceObjs1 = sourcePtr1->GetObjects(); 
     const auto& sourceObjs2 = sourcePtr2->GetObjects(); 

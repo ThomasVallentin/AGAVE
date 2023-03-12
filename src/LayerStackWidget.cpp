@@ -61,9 +61,9 @@ bool LayerStackWidget::Draw()
                 m_layerStack->NewLayer("Layer", {});
             }
 
-            if (ImGui::MenuItem("Subset", "", nullptr, m_selection.size() == 1))
+            if (ImGui::MenuItem("SelfCombination", "", nullptr, m_selection.size() == 1))
             {
-                m_layerStack->NewSubset("Layer", m_selection[0], 0);
+                m_layerStack->NewSelfCombination("Layer", m_selection[0], 0);
             }
 
             if (ImGui::MenuItem("Combination", "", nullptr, m_selection.size() == 2))
@@ -221,19 +221,20 @@ bool DrawProviderComboBox(const LayerPtr& layer)
 {
     bool somethingChanged = false;
 
-    const char* providerNames[] = {"None (empty result)",
-                                  "Copy",
-                                  "Subset",
-                                  "Combination"};
+    const char* providerNames[] = {"None (empty layer)",
+                                   "Static (no computation)",
+                                   "Subset",
+                                   "Combination",
+                                   "Self combination"};
     auto createProvider = [](const uint32_t& index) -> ProviderPtr
     {
         switch (index)
         {
-            case ProviderType::CopyProvider:
-                return std::make_shared<Copy>();
-            case ProviderType::SubsetProvider:
+            case ProviderType_Subset:
                 return std::make_shared<Subset>();
-            case ProviderType::CombinationProvider:
+            case ProviderType_SelfCombination:
+                return std::make_shared<SelfCombination>();
+            case ProviderType_Combination:
                 return std::make_shared<Combination>();
         }
 
@@ -241,7 +242,7 @@ bool DrawProviderComboBox(const LayerPtr& layer)
     };
 
     auto provider = layer->GetProvider();
-    uint32_t currentIndex = provider ? provider->GetType() : ProviderType::NoProvider;
+    uint32_t currentIndex = provider ? provider->GetType() : ProviderType_None;
     if (ImGui::BeginCombo((std::string("##ProviderCombo") + layer->GetName()).c_str(), providerNames[currentIndex]))
     {
         for (size_t i=0 ; i < IM_ARRAYSIZE(providerNames) ; ++i)
@@ -263,18 +264,18 @@ bool DrawProviderComboBox(const LayerPtr& layer)
 }
 
 
-bool DrawOperatorComboBox(const LayerPtr& layer)
+bool DrawOperatorComboBox(const LayerPtr& layer, const std::shared_ptr<OperatorBasedProvider>& provider)
 {
     bool somethingChanged = false;
 
     auto indexFromOperator = [](const Operator& op)->uint32_t {
         if (!op) {
             return 0;
-        } else if (op == Layer::OuterOp) {
+        } else if (op == Operators::OuterProduct) {
             return 1;
-        } else if (op == Layer::InnerOp) {
+        } else if (op == Operators::InnerProduct) {
             return 2;
-        } else if (op == Layer::GeomOp) {
+        } else if (op == Operators::GeomProduct) {
             return 3;
         } else {
             return 4;
@@ -286,11 +287,11 @@ bool DrawOperatorComboBox(const LayerPtr& layer)
                              "Geometric product",
                              "Custom operator"};
     Operator operators[] = {nullptr,
-                            Layer::OuterOp,
-                            Layer::InnerOp,
-                            Layer::GeomOp};
+                            Operators::OuterProduct,
+                            Operators::InnerProduct,
+                            Operators::GeomProduct};
 
-    uint32_t currentIndex = indexFromOperator(layer->GetOperator());
+    uint32_t currentIndex = indexFromOperator(provider->GetOperator());
     if (ImGui::BeginCombo((std::string("##OperatorCombo") + layer->GetName()).c_str(), opNames[currentIndex]))
     {
         for (size_t i=0 ; i < IM_ARRAYSIZE(opNames) ; ++i)
@@ -299,7 +300,8 @@ bool DrawOperatorComboBox(const LayerPtr& layer)
             int flags = (i == 4) ? ImGuiSelectableFlags_Disabled : 0;
 
             if (ImGui::Selectable(opNames[i], selected, flags)) {
-                layer->SetOperator(operators[i]);
+                provider->SetOperator(operators[i]);
+                layer->SetDirty(true);
                 somethingChanged = true;
             }
 
@@ -367,7 +369,7 @@ bool LayerStackWidget::DrawProvider(const LayerPtr& layer,
     {
         switch (provider->GetType())
         {
-            case ProviderType::CopyProvider: {
+            case ProviderType_Subset: {
                 ImGui::AlignTextToFramePadding();
                 ImGui::Text("Source :");
                 ImGui::SameLine();
@@ -380,7 +382,7 @@ bool LayerStackWidget::DrawProvider(const LayerPtr& layer,
                 break;
             }
 
-            case ProviderType::SubsetProvider: {
+            case ProviderType_SelfCombination: {
                 ImGui::AlignTextToFramePadding();
                 ImGui::Text("Source :");
                 ImGui::SameLine();
@@ -390,10 +392,15 @@ bool LayerStackWidget::DrawProvider(const LayerPtr& layer,
 
                 sourcesChanged |= DrawSourceComboBox(layers, layer, sources[0], 0);
 
+                ImGui::AlignTextToFramePadding();
+                ImGui::Text("Operator :");
+                ImGui::SameLine();
+                sourcesChanged |= DrawOperatorComboBox(layer, std::dynamic_pointer_cast<OperatorBasedProvider>(provider));
+
                 break;
             }
 
-            case ProviderType::CombinationProvider: {
+            case ProviderType_Combination: {
                 ImGui::AlignTextToFramePadding();
                 ImGui::Text("Source 1 :");
                 ImGui::SameLine();
@@ -407,6 +414,11 @@ bool LayerStackWidget::DrawProvider(const LayerPtr& layer,
                 ImGui::Text("Source 2 :");
                 ImGui::SameLine();
                 sourcesChanged |= DrawSourceComboBox(layers, layer, sources[1], 1);
+
+                ImGui::AlignTextToFramePadding();
+                ImGui::Text("Operator :");
+                ImGui::SameLine();
+                sourcesChanged |= DrawOperatorComboBox(layer, std::dynamic_pointer_cast<OperatorBasedProvider>(provider));
 
                 break;
             }
@@ -424,12 +436,6 @@ bool LayerStackWidget::DrawProvider(const LayerPtr& layer,
     }
 
     somethingChanged || sourcesChanged;
-
-    // Operator
-    ImGui::AlignTextToFramePadding();
-    ImGui::Text("Operator :");            
-    ImGui::SameLine();
-    somethingChanged |= DrawOperatorComboBox(layer);
 
     return somethingChanged;
 }

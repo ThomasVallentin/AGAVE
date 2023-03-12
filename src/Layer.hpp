@@ -12,11 +12,7 @@ using Operator = c3ga::Mvec<double>(*)(const c3ga::Mvec<double>&, const c3ga::Mv
 
 
 class Layer;
-class Layer;
 class Provider; 
-class Copy; 
-class Subset; 
-class Combination;
 
 using LayerPtr = std::shared_ptr<Layer>;
 using LayerWeakPtr = std::weak_ptr<Layer>;
@@ -31,7 +27,7 @@ class Layer
 {
 public:
     Layer(const std::string& name, const MvecArray& objects);
-    Layer(const std::string& name, const ProviderPtr& provider, const Operator& op);
+    Layer(const std::string& name, const ProviderPtr& provider);
     ~Layer() = default;
 
     inline std::string GetName() const { return m_name; }
@@ -56,9 +52,6 @@ public:
     void SetDirty(const bool& dirty);
     inline bool IsDirty() const { return m_isDirty; }
 
-    inline Operator GetOperator() const { return m_op; }
-    void SetOperator(const Operator& op);
-
     inline ProviderPtr GetProvider() const { return m_provider; }
     void SetProvider(const ProviderPtr& provider);
 
@@ -75,22 +68,12 @@ public:
 
     inline bool operator==(const Layer& other) { return true; }
 
-public:
-    // Operators
-    inline static c3ga::Mvec<double> InnerOp(const c3ga::Mvec<double>& first, 
-                                            const c3ga::Mvec<double>& second) { return first | second; }
-    inline static c3ga::Mvec<double> OuterOp(const c3ga::Mvec<double>& first, 
-                                            const c3ga::Mvec<double>& second) { return first ^ second; }
-    inline static c3ga::Mvec<double> GeomOp(const c3ga::Mvec<double>& first, 
-                                           const c3ga::Mvec<double>& second) { return first * second; }
-
 private:
     std::string m_name;
     bool m_visibility;
 
     MvecArray m_objects;
     ProviderPtr m_provider;
-    Operator m_op;
 
     LayerWeakPtrArray m_sources;
     LayerWeakPtrArray m_destinations;
@@ -100,36 +83,79 @@ private:
 
 enum ProviderType
 {
-    NoProvider = 0,
-    CopyProvider,
-    SubsetProvider,
-    CombinationProvider,
+    ProviderType_None = 0,
+    ProviderType_Static           = 1 << 0,
+    ProviderType_Subset           = 1 << 1,
+    ProviderType_Combination      = 1 << 2,
+    ProviderType_SelfCombination  = 1 << 3,
 };
 
 class Provider
 {
 public:
-    virtual void Compute(const Operator& op, Layer& layer) = 0;
+    virtual void Compute(Layer& layer) = 0;
     virtual ProviderType GetType() const = 0;
     virtual inline uint32_t GetSourceCount() const { return 0; }
 };
 
-class Copy : public Provider
+class Static : public Provider
 {
 public:
-    Copy() = default;
-
-    void Compute(const Operator& op, Layer& layer) override {}
-    inline ProviderType GetType() const override { return ProviderType::CopyProvider; }
-    inline uint32_t GetSourceCount() const override { return 1; }
+    inline void Compute(Layer& layer) override {};
+    inline ProviderType GetType() const override { return ProviderType_Static; };
+    inline uint32_t GetSourceCount() const override { return 0; }
 };
 
 class Subset : public Provider
 {
 public:
-    Subset() : m_dimension(0), m_count(-1) {}
-    Subset(const uint32_t& dimension, 
-           const int& count=-1) :
+    Subset(const int& count=-1) : m_count(count) {}
+
+    inline int GetCount() const { return m_count; }
+    inline void SetCount(const int& count) { m_count = count; }
+
+    void Compute(Layer& layer) override;
+    inline ProviderType GetType() const override { return ProviderType_Subset; }
+    inline uint32_t GetSourceCount() const override { return 1; }
+
+private:
+    int m_count; 
+};
+
+namespace Operators {
+    inline c3ga::Mvec<double> 
+    InnerProduct(const c3ga::Mvec<double>& first, 
+                 const c3ga::Mvec<double>& second) { return first | second; }
+                 
+    inline c3ga::Mvec<double> 
+    OuterProduct(const c3ga::Mvec<double>& first, 
+                 const c3ga::Mvec<double>& second) { return first ^ second; }
+
+    inline c3ga::Mvec<double> 
+    GeomProduct(const c3ga::Mvec<double>& first, 
+                const c3ga::Mvec<double>& second) { return first * second; }
+}
+
+class OperatorBasedProvider : public Provider
+{
+public:
+    OperatorBasedProvider(const Operator& op=Operators::OuterProduct) : m_op(op) {}
+
+    inline Operator GetOperator() const { return m_op; }
+    void SetOperator(const Operator& op);
+
+private:
+    Operator m_op;
+};
+
+class SelfCombination : public OperatorBasedProvider
+{
+public:
+    SelfCombination() : OperatorBasedProvider(), m_dimension(0), m_count(-1) {}
+    SelfCombination(const uint32_t& dimension, 
+                    const int& count=-1,
+                    const Operator& op=Operators::OuterProduct) :
+            OperatorBasedProvider(op),
             m_dimension(dimension), 
             m_count(count) {}
 
@@ -139,8 +165,8 @@ public:
     inline uint8_t GetDimension() const { return m_dimension; }
     inline void SetDimension(const uint8_t& dimension) { m_dimension = dimension; }
 
-    void Compute(const Operator& op, Layer& layer) override;
-    inline ProviderType GetType() const override { return ProviderType::SubsetProvider; }
+    void Compute(Layer& layer) override;
+    inline ProviderType GetType() const override { return ProviderType_SelfCombination; }
     inline uint32_t GetSourceCount() const override { return 1; }
 
 private:
@@ -151,14 +177,14 @@ private:
     uint32_t m_prevCount, m_prevDim, m_prevSourceCount;
 };
 
-
-class Combination : public Provider
+class Combination : public OperatorBasedProvider
 {
 public:
-    Combination() = default;
+    Combination(const Operator& op=Operators::OuterProduct) : 
+            OperatorBasedProvider(op) {}
 
-    void Compute(const Operator& op, Layer& layer) override;
-    inline ProviderType GetType() const override { return ProviderType::CombinationProvider; }
+    void Compute(Layer& layer) override;
+    inline ProviderType GetType() const override { return ProviderType_Combination; }
     inline uint32_t GetSourceCount() const override { return 2; }
 };
 
