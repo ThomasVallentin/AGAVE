@@ -209,7 +209,7 @@ bool LayerStackWidget::DrawLayer(const LayerPtr& layer, const int& index)
 
     // Draw the extended data if the item is expanded
     if (opened) {
-        somethingChanged |= DrawProvider(layer, isSelected, isSource);
+        somethingChanged |= DrawLayerContent(layer, isSelected, isSource);
         ImGui::TreePop();
     }
 
@@ -217,12 +217,14 @@ bool LayerStackWidget::DrawLayer(const LayerPtr& layer, const int& index)
 }
 
 
+// == Provider choice ==
+
 bool DrawProviderComboBox(const LayerPtr& layer)
 {
     bool somethingChanged = false;
 
     const char* providerNames[] = {"None (empty layer)",
-                                   "Static (no computation)",
+                                   "Static",
                                    "Random generator",
                                    "Subset",
                                    "Combination",
@@ -231,6 +233,10 @@ bool DrawProviderComboBox(const LayerPtr& layer)
     {
         switch (index)
         {
+            case ProviderType_Static:
+                return std::make_shared<Static>();
+            case ProviderType_RandomGenerator:
+                return std::make_shared<RandomGenerator>();
             case ProviderType_Subset:
                 return std::make_shared<Subset>();
             case ProviderType_SelfCombination:
@@ -239,7 +245,7 @@ bool DrawProviderComboBox(const LayerPtr& layer)
                 return std::make_shared<Combination>();
         }
 
-        return nullptr;
+        return {};
     };
 
     auto provider = layer->GetProvider();
@@ -264,6 +270,8 @@ bool DrawProviderComboBox(const LayerPtr& layer)
     return somethingChanged;
 }
 
+
+// == Operator choice ==
 
 bool DrawOperatorComboBox(const LayerPtr& layer, const std::shared_ptr<OperatorBasedProvider>& provider)
 {
@@ -316,35 +324,8 @@ bool DrawOperatorComboBox(const LayerPtr& layer, const std::shared_ptr<OperatorB
     return somethingChanged;
 }
 
-bool DrawSourceComboBox(const LayerPtrArray& layers, const LayerPtr& currentLayer, LayerWeakPtr& source, int index)
-{
-    LayerPtr src = source.lock();
-    const char* currentName = src ? src->GetName().c_str() : ""; 
 
-    bool somethingChanged = false;
-    if (ImGui::BeginCombo((std::string("##SourceCombo") + currentLayer->GetName() + std::to_string(index)).c_str(), currentName))
-    {
-        for (size_t i = 0; i < layers.size(); i++)
-        {
-            const auto& layer = layers[i];
-            bool selected = layer == src;
-            int flags = layer == currentLayer ? ImGuiSelectableFlags_Disabled : 0;
-
-            if (ImGui::Selectable(layer->GetName().c_str(), selected, flags)) {
-                source = layer;
-                somethingChanged = true;
-            }
-
-            if (selected)
-                ImGui::SetItemDefaultFocus();  
-        }
-
-        ImGui::EndCombo();
-    }
-
-    return somethingChanged;
-}
-
+// == Static provider content ==
 
 bool DrawDragControl(const char* label, 
                      const char* name, 
@@ -354,7 +335,7 @@ bool DrawDragControl(const char* label,
                      const float& width=100.0f)
 {
     ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 3));
-    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(2, 3));
+    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(3, 3));
     ImGui::PushStyleColor(ImGuiCol_Button, color);
     ImGui::PushStyleColor(ImGuiCol_ButtonActive, color);
     ImGui::PushStyleColor(ImGuiCol_ButtonHovered, color);
@@ -372,7 +353,6 @@ bool DrawDragControl(const char* label,
     
     return result;
 }
-
 
 bool DrawPositionControl(const std::string& name, float* position, const float& sensitivity=0.05f, const float& width=100.0f) 
 {
@@ -413,8 +393,6 @@ bool DrawRadiusControl(const std::string& name, float* radius, const float& sens
                            width);
 }
 
-
-
 bool DrawStaticProvider(const LayerPtr& layer) 
 {
     bool somethingChanged = false;
@@ -431,7 +409,6 @@ bool DrawStaticProvider(const LayerPtr& layer)
         auto& obj = objects[i];
         c3ga::MvecType objType = c3ga::getTypeOf(obj);
         std::string objTypeName = c3ga::typeToName(objType);
-
 
         // Type combo box
         std::string suffix = layer->GetName() + std::to_string(i);
@@ -454,19 +431,19 @@ bool DrawStaticProvider(const LayerPtr& layer)
         }
 
         // Details
-        float availableWidth = ImGui::GetContentRegionAvail().x - 100.0f - 24.0f;
+        float availableWidth = ImGui::GetContentRegionAvail().x - 100.0f - 14.0f;
         float sensitivity = 0.05f;
+        int itemCount = 0;
         switch (objType)
         {
             case c3ga::MvecType::Point: {
                 float position[3] = {(float)obj[c3ga::E1], (float)obj[c3ga::E2], (float)obj[c3ga::E3]};
                 ImGui::SameLine();
                 if (DrawPositionControl(suffix, position, sensitivity, availableWidth / 3.0f)) {
-                    obj[c3ga::E1] = (double)position[0];
-                    obj[c3ga::E2] = (double)position[1];
-                    obj[c3ga::E3] = (double)position[2];
+                    obj = c3ga::point((double)position[0], (double)position[1], (double)position[2]);
                     somethingChanged = true;
                 }
+                itemCount = 3;
                 break;
             }
 
@@ -495,6 +472,8 @@ bool DrawStaticProvider(const LayerPtr& layer)
                     somethingChanged = true;
                 }
 
+                itemCount = 4;
+
                 break;
             }
             
@@ -522,12 +501,13 @@ bool DrawStaticProvider(const LayerPtr& layer)
                     somethingChanged = true;
                 }
 
+                itemCount = 4;
+
                 break;
             }
         }
 
-        ImGui::SameLine();
-        ImGui::SetNextItemWidth(10.0f);
+        ImGui::SameLine(ImGui::GetWindowContentRegionMax().x - 16.0f);
         ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 1);
         ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(5, 2));
         if (ImGui::Button((std::string("X##RemoveButton") + suffix).c_str()))
@@ -542,7 +522,7 @@ bool DrawStaticProvider(const LayerPtr& layer)
 
     if (ImGui::Button("+"))
     {
-        objects.push_back(c3ga::randomPoint<double>());
+        objects.push_back(c3ga::point(0.0, 0.0, 0.0));
         somethingChanged = true;
     }
 
@@ -551,7 +531,38 @@ bool DrawStaticProvider(const LayerPtr& layer)
 }
 
 
-bool LayerStackWidget::DrawProvider(const LayerPtr& layer, 
+// == Sources ==
+
+bool DrawSourceComboBox(const LayerPtrArray& layers, const LayerPtr& currentLayer, LayerWeakPtr& source, int index)
+{
+    LayerPtr src = source.lock();
+    const char* currentName = src ? src->GetName().c_str() : ""; 
+
+    bool somethingChanged = false;
+    if (ImGui::BeginCombo((std::string("##SourceCombo") + currentLayer->GetName() + std::to_string(index)).c_str(), currentName))
+    {
+        for (size_t i = 0; i < layers.size(); i++)
+        {
+            const auto& layer = layers[i];
+            bool selected = layer == src;
+            int flags = layer == currentLayer ? ImGuiSelectableFlags_Disabled : 0;
+
+            if (ImGui::Selectable(layer->GetName().c_str(), selected, flags)) {
+                source = layer;
+                somethingChanged = true;
+            }
+
+            if (selected)
+                ImGui::SetItemDefaultFocus();  
+        }
+
+        ImGui::EndCombo();
+    }
+
+    return somethingChanged;
+}
+
+bool LayerStackWidget::DrawLayerContent(const LayerPtr& layer, 
                                     const bool& isSelected, 
                                     const bool& isSource)
 {

@@ -26,7 +26,7 @@ public:
 
 private:
     bool DrawLayer(const LayerPtr& layer, const int& index);
-    bool DrawProvider(const LayerPtr& layer, 
+    bool DrawLayerContent(const LayerPtr& layer, 
                      const bool& isSelected, 
                      const bool& isSource);
     

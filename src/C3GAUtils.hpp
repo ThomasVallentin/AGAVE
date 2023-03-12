@@ -415,7 +415,6 @@ glm::mat4 extractDualCircleMatrix(const Mvec<T>& dualCircle)
     T radius;
     Mvec<T> center, direction;
     extractDualCircle(dualCircle, radius, center, direction);
-    std::cout << whoAmI(dualCircle) << std::endl; 
 
     glm::mat4 t = glm::translate(glm::mat4(1.0f), {center[E1], center[E2], center[E3]});
     glm::mat4 r = glm::toMat4(glm::quat{glm::vec3(0, 1, 0), glm::vec3(direction[E1], direction[E2], direction[E3])});
@@ -430,12 +429,9 @@ glm::mat4 extractDualSphereMatrix(const Mvec<T>& dualSphere)
     T radius;
     Mvec<T> center;
     radiusAndCenterFromDualSphere(dualSphere, radius, center);
-    std::cout << whoAmI(dualSphere) << std::endl; 
 
     glm::mat4 t = glm::translate(glm::mat4(1.0f), {center[E1], center[E2], center[E3]});
     glm::mat4 s = glm::scale(glm::mat4(1.0f), glm::vec3(radius));
-
-    std::cout << glm::to_string(t * s) << std::endl;
     return t * s;
 }
 
