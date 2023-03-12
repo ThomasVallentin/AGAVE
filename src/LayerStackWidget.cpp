@@ -139,6 +139,7 @@ bool LayerStackWidget::DrawLayer(const LayerPtr& layer, const int& index)
     bool opened = ImGui::TreeNodeEx((layerName + "##LayerStackNode").c_str(), nodeFlags);
     ImGui::PopStyleColor(popColors);
 
+    // Processing clicked before creating the visibility checkbox it messes the clicked up 
     bool clicked = ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen();
 
     // Context menu
@@ -154,17 +155,32 @@ bool LayerStackWidget::DrawLayer(const LayerPtr& layer, const int& index)
     }
 
     // Visibility Checkbox
+    bool isVisible = layer->GetVisiblity();
     ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
     ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, ImVec4(0.0f, 0.0f, 0.0f, 1.0f));
     ImGui::PushStyleColor(ImGuiCol_FrameBgActive, ImVec4(0.0f, 0.0f, 0.0f, 1.0f));
+    popColors = 2;
 
-    ImGui::SameLine(ImGui::GetWindowWidth() - 23);
+    if (!isVisible)
+    {
+        ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
+        popColors += 1;
+    }
+
+    ImGui::SameLine(ImGui::GetWindowWidth() - 72.0f);
+    ImGui::Text("Visible :");
+    ImGui::SameLine();
     ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 3);
-    bool toggled = ImGui::Checkbox((std::string("##VisibilityCBox") + layerName).c_str(), 
-                                   &layer->GetVisiblity(),
-                                   ImGuiButtonFlags_PressedOnClick);
-    somethingChanged |= toggled;
-    ImGui::PopStyleColor(2);
+    bool toggled = false;
+    if (ImGui::Checkbox((std::string("##VisibilityCBox") + layerName).c_str(), 
+                        &isVisible,
+                        ImGuiButtonFlags_PressedOnClick))
+    {
+        layer->SetVisiblity(isVisible);
+        somethingChanged = true;
+        toggled = true;
+    }
+    ImGui::PopStyleColor(popColors);
     ImGui::PopStyleVar();
 
     // Update selection if visibility was not toggled nor item was expanded
@@ -212,6 +228,7 @@ bool LayerStackWidget::DrawLayer(const LayerPtr& layer, const int& index)
     // Draw the extended data if the item is expanded
     if (opened) {
         somethingChanged |= DrawLayerContent(layer, isSelected, isSource);
+        ImGui::Spacing();
         ImGui::TreePop();
     }
 
@@ -251,8 +268,10 @@ bool DrawProviderComboBox(const LayerPtr& layer)
     };
 
     auto provider = layer->GetProvider();
+    std::string suffix = layer->GetName();
     uint32_t currentIndex = provider ? provider->GetType() : ProviderType_None;
-    if (ImGui::BeginCombo((std::string("##ProviderCombo") + layer->GetName()).c_str(), providerNames[currentIndex]))
+    ImGui::SetNextItemWidth(150);
+    if (ImGui::BeginCombo((std::string("##ProviderCombo") + suffix).c_str(), providerNames[currentIndex]))
     {
         for (size_t i=0 ; i < IM_ARRAYSIZE(providerNames) ; ++i)
         {
@@ -268,6 +287,30 @@ bool DrawProviderComboBox(const LayerPtr& layer)
 
         ImGui::EndCombo();
     }
+
+    // Animated Checkbox
+    auto animatedProvider = std::dynamic_pointer_cast<Explicit>(provider);
+    if (!animatedProvider)
+    {
+        return somethingChanged;
+    }
+
+    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
+    ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, ImVec4(0.0f, 0.0f, 0.0f, 1.0f));
+    ImGui::PushStyleColor(ImGuiCol_FrameBgActive, ImVec4(0.0f, 0.0f, 0.0f, 1.0f));
+
+    ImGui::SameLine(ImGui::GetWindowWidth() - 89.0f);
+    ImGui::Text("Animated :");
+    ImGui::SameLine();
+    ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 3);
+    bool animated = animatedProvider->IsAnimated();
+    if (ImGui::Checkbox((std::string("##AnimatedCBox") + suffix).c_str(), &animated))
+    {
+        animatedProvider->SetAnimated(animated);
+        somethingChanged = true;
+    }
+    ImGui::PopStyleColor(2);
+    ImGui::PopStyleVar();
 
     return somethingChanged;
 }
@@ -405,10 +448,12 @@ bool DrawExplicitProvider(const LayerPtr& layer)
                                "Sphere",
                                "DualSphere"};
     auto& objects = layer->GetObjects();
+    auto provider = std::dynamic_pointer_cast<Explicit>(layer->GetProvider());
 
     ImGui::AlignTextToFramePadding();
     ImGui::Text("Content :");
 
+    ImGui::BeginDisabled(provider->IsAnimated());
     for (size_t i=0 ; i < objects.size() ; )
     {
         auto& obj = objects[i];
@@ -524,6 +569,7 @@ bool DrawExplicitProvider(const LayerPtr& layer)
         }
         ImGui::PopStyleVar();
     }
+    ImGui::EndDisabled();
 
     if (ImGui::Button("+"))
     {

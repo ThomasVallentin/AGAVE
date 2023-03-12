@@ -8,8 +8,8 @@
 
 // == Explicit Provider ==
 
-void SetAnimated(const bool& animated) {
-    
+void Explicit::SetAnimated(const bool& animated) {
+    m_animated = animated;
 }
 
 // == Random Generator ==
