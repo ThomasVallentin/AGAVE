@@ -2,6 +2,8 @@
 #define LAYERSTACK_H
 
 #include "Layer.hpp"
+#include "Provider.hpp"
+
 
 class LayerStack;
 

@@ -45,6 +45,7 @@ int main(int argc, char* argv[])
 
     LayerStackPtr stack = std::make_shared<LayerStack>();
 
+    // Generate the content of the scene
     MvecArray objects = {c3ga::dualSphere<double>(0, 0, 0, 1).dual()};
     auto lyr1 = stack->NewLayer("Layer1", objects);
     objects = {c3ga::dualSphere<double>(0, 1, 0, 1).dual()};
@@ -60,21 +61,6 @@ int main(int argc, char* argv[])
     bool somethingChanged = false;
     while (!window.ShouldClose()) {
         currTime = window.GetTime();
-
-        // objects[0] = c3ga::point<double>(-0.562082, -0.0826997, std::sin(currTime));
-        // lyr1->SetObjects(objects);
-        // engine.Update(currTime - prevTime);
-
- 	    // vbo->Bind();
-        // for (int i = 0 ; i < points.size() ; ++i) {
-        //     const auto& object = objects[i];
-        //     points[i] = {object.position[c3ga::E1], object.position[c3ga::E2], object.position[c3ga::E3]};
-        // }
-        // vbo->SetData(points.data(), points.size() * sizeof(glm::vec3));
-
-        // shader->Bind();
-        // shader->SetMat4("uViewProjMatrix", camera.GetViewProjectionMatrix());
-        // vao->Bind();
 
         // Update all the visible layers
         for (const auto& layer : stack->GetLayers())
