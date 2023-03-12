@@ -3,17 +3,33 @@
 
 #include "Layer.hpp"
 
+#include "C3GAUtils.hpp"
+
 
 using Operator = c3ga::Mvec<double>(*)(const c3ga::Mvec<double>&, const c3ga::Mvec<double>&);
 
+namespace Operators {
+    inline c3ga::Mvec<double> 
+    InnerProduct(const c3ga::Mvec<double>& first, 
+                 const c3ga::Mvec<double>& second) { return first | second; }
+                 
+    inline c3ga::Mvec<double> 
+    OuterProduct(const c3ga::Mvec<double>& first, 
+                 const c3ga::Mvec<double>& second) { return first ^ second; }
+
+    inline c3ga::Mvec<double> 
+    GeomProduct(const c3ga::Mvec<double>& first, 
+                const c3ga::Mvec<double>& second) { return first * second; }
+}
 
 enum ProviderType
 {
     ProviderType_None = 0,
-    ProviderType_Static           = 1 << 0,
-    ProviderType_Subset           = 1 << 1,
-    ProviderType_Combination      = 1 << 2,
-    ProviderType_SelfCombination  = 1 << 3,
+    ProviderType_Static,
+    ProviderType_RandomGenerator,
+    ProviderType_Subset,
+    ProviderType_Combination,
+    ProviderType_SelfCombination,
 };
 
 class Provider
@@ -24,13 +40,45 @@ public:
     virtual inline uint32_t GetSourceCount() const { return 0; }
 };
 
+using ObjectType = c3ga::MvecType;
+
 class Static : public Provider
 {
 public:
-    inline void Compute(Layer& layer) override {};
+
+    void Compute(Layer& layer) override {};
     inline ProviderType GetType() const override { return ProviderType_Static; };
     inline uint32_t GetSourceCount() const override { return 0; }
+
+private:
+    MvecArray m_objects;
 };
+
+class RandomGenerator : public Provider
+{
+public:
+    RandomGenerator() : m_objType(ObjectType::Point), m_count(4) {}
+    RandomGenerator(const ObjectType& objType, const uint32_t& count=4) : 
+           m_objType(objType), 
+           m_count(count) {}
+
+    inline ObjectType GetObjectType() const { return m_objType; }
+    inline void SetObjectType(const ObjectType& objType) { m_objType = objType; m_isDirty = true; }
+
+    inline uint32_t GetCount() const { return m_count; }
+    inline void SetCount(const uint32_t& count) { m_count = count; m_isDirty = true; }
+
+    void Compute(Layer& layer) override;
+    inline ProviderType GetType() const override { return ProviderType_RandomGenerator; };
+    inline uint32_t GetSourceCount() const override { return 0; }
+
+private:
+    bool m_isDirty = true;
+    
+    ObjectType m_objType;
+    uint32_t m_count;
+};
+
 
 class Subset : public Provider
 {
@@ -48,19 +96,6 @@ private:
     int m_count; 
 };
 
-namespace Operators {
-    inline c3ga::Mvec<double> 
-    InnerProduct(const c3ga::Mvec<double>& first, 
-                 const c3ga::Mvec<double>& second) { return first | second; }
-                 
-    inline c3ga::Mvec<double> 
-    OuterProduct(const c3ga::Mvec<double>& first, 
-                 const c3ga::Mvec<double>& second) { return first ^ second; }
-
-    inline c3ga::Mvec<double> 
-    GeomProduct(const c3ga::Mvec<double>& first, 
-                const c3ga::Mvec<double>& second) { return first * second; }
-}
 
 class OperatorBasedProvider : public Provider
 {
@@ -73,6 +108,7 @@ public:
 private:
     Operator m_op;
 };
+
 
 class SelfCombination : public OperatorBasedProvider
 {
@@ -102,6 +138,7 @@ private:
     std::vector<uint32_t> m_indices;
     uint32_t m_prevCount, m_prevDim, m_prevSourceCount;
 };
+
 
 class Combination : public OperatorBasedProvider
 {

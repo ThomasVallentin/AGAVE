@@ -251,6 +251,164 @@ MvecType getTypeOf(Mvec<T> mv)
     return MvecType::Unknown;
 }
 
+
+inline std::string typeToName(const MvecType& type)
+{
+    switch (type)
+    {
+        case MvecType::Scalar:
+            return "Scalar";
+
+        case MvecType::Point:
+            return"Point";
+
+        case MvecType::DualSphere:
+            return "DualSphere";
+
+        case MvecType::ImaginaryDualSphere:
+            return "ImaginaryDualSphere";
+
+        case MvecType::DualPlane:
+            return "DualPlane";
+
+        case MvecType::DualLine:
+            return "DualLine";
+
+        case MvecType::FlatPoint:
+            return "FlatPoint";
+
+        case MvecType::DualCircle:
+            return "DualCircle";
+
+        case MvecType::PairPoint:
+            return "PairPoint";
+
+        case MvecType::TangentVector:
+            return "TangentVector";
+
+        case MvecType::Line:
+            return "Line";
+            
+        case MvecType::DualFlatPoint:
+            return "DualFlatPoint";
+
+        case MvecType::Circle:
+            return "Circle";
+
+        case MvecType::ImaginaryCircle:
+            return "ImaginaryCircle";
+
+        case MvecType::TangentBivector:
+            return "TangentBivector";
+
+        case MvecType::DualPoint:
+            return "DualPoint";
+
+        case MvecType::Sphere:
+            return "Sphere";
+
+        case MvecType::ImaginarySphere:
+            return "ImaginarySphere";
+
+        case MvecType::Plane:
+            return"Plane";
+
+        case MvecType::PseudoScalar:
+            return "PseudoScalar";
+
+        case MvecType::NullVector:
+            return "NullVector";
+
+        case MvecType::NonHomogenousMultiVector:
+            return "NonHomogenousMultiVector";
+
+        default:
+            return "Unknown";
+    }
+}
+
+
+// Convert an mvector from a type to another one
+// Currently supports point, sphere and dualSphere conversion
+template <typename T>
+Mvec<T> ConvertMvecToType(const Mvec<T>& mv, const MvecType& fromType, const MvecType& toType)
+{
+    Mvec<T> result;
+
+    // Returns as soon as possible if we cannot generate the requested MvecType
+    switch (toType)
+    {
+        case c3ga::MvecType::Point: 
+        case c3ga::MvecType::Sphere: 
+        case c3ga::MvecType::DualSphere: {
+            break;
+        }
+
+        default:
+            return result;
+    }
+
+    Mvec<T> center, direction;
+    T radius;
+    switch (fromType)
+    {
+        case c3ga::MvecType::Point: {
+            center = mv;
+            radius = 1.0;
+            break;
+        }
+
+        case c3ga::MvecType::Sphere: 
+        case c3ga::MvecType::ImaginarySphere: {
+            radiusAndCenterFromDualSphere(mv.dual(), radius, center);
+            break;
+        }
+        case c3ga::MvecType::DualSphere: 
+        case c3ga::MvecType::ImaginaryDualSphere: {
+            radiusAndCenterFromDualSphere(mv, radius, center);
+            break;
+        }
+
+        case c3ga::MvecType::Circle: 
+        case c3ga::MvecType::ImaginaryCircle: {
+            extractDualCircle(mv.dual(), radius, center, direction);
+            break;
+        }
+        case c3ga::MvecType::DualCircle: 
+        case c3ga::MvecType::ImaginaryDualCircle: {
+            extractDualCircle(mv, radius, center, direction);
+            break;
+        }
+
+        default:
+            return result;
+    }
+
+    switch (toType)
+    {
+        case c3ga::MvecType::Point: {
+            return point(center[E1], center[E2], center[E3]);
+        }
+        case c3ga::MvecType::Sphere: {
+            return dualSphere<T>(center[E1], center[E2], center[E3], radius).dual();
+        }
+        case c3ga::MvecType::DualSphere: {
+            return dualSphere<T>(center[E1], center[E2], center[E3], radius);
+        }
+
+        default:
+            return result;
+    }
+}
+
+// Convenience overloading
+template <typename T>
+Mvec<T> ConvertMvecToType(const Mvec<T>& mv, const MvecType& toType)
+{
+    return ConvertMvecToType(mv, toType, getTypeOf(mv));
+}
+
+
 template <typename T>
 glm::mat4 extractDualCircleMatrix(const Mvec<T>& dualCircle)
 {
@@ -280,6 +438,13 @@ glm::mat4 extractDualSphereMatrix(const Mvec<T>& dualSphere)
     std::cout << glm::to_string(t * s) << std::endl;
     return t * s;
 }
+
+template <typename T>
+T extractDualSphereRadius(const Mvec<T>& dualSphere)
+{
+    return (dualSphere | dualSphere) / dualSphere[c3ga::E0];
+}
+
 
 } // namespace c3ga
 

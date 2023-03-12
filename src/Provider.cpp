@@ -1,8 +1,44 @@
 #include "Provider.hpp"
 
+#include "c3gaTools.hpp"
+
 #include <random>
 
-// == OperatorBasedProvider
+// == RandomGenerator ==
+
+void RandomGenerator::Compute(Layer& layer) 
+{
+    if (!m_isDirty)
+    {
+        auto& objects = layer.GetObjects();
+        objects.clear();
+        switch (m_objType)
+        {
+            case ObjectType::Point:
+            {
+                for (size_t i=0 ; i < m_count ; ++i)
+                    objects.push_back(c3ga::randomPoint<double>());
+
+                break;
+            }
+            case ObjectType::Sphere:
+            {
+                for (size_t i=0 ; i < m_count ; ++i)
+                {
+		            std::uniform_real_distribution<double> distrib(-1.0,1.0);
+                    objects.push_back(c3ga::dualSphere<double>(distrib(c3ga::generator),
+                                                               distrib(c3ga::generator), 
+                                                               distrib(c3ga::generator), 
+                                                               1.0).dual());
+                }
+
+                break;
+            }
+        }
+    }
+}
+
+// == OperatorBasedProvider ==
 
 void OperatorBasedProvider::SetOperator(const Operator& op)
 {
@@ -10,7 +46,7 @@ void OperatorBasedProvider::SetOperator(const Operator& op)
         m_op = op;
 }
 
-// Subset
+// == Subset ==
 
 void Subset::Compute(Layer& layer)
 {

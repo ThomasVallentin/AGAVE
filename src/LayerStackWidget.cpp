@@ -223,6 +223,7 @@ bool DrawProviderComboBox(const LayerPtr& layer)
 
     const char* providerNames[] = {"None (empty layer)",
                                    "Static (no computation)",
+                                   "Random generator",
                                    "Subset",
                                    "Combination",
                                    "Self combination"};
@@ -345,9 +346,214 @@ bool DrawSourceComboBox(const LayerPtrArray& layers, const LayerPtr& currentLaye
 }
 
 
+bool DrawDragControl(const char* label, 
+                     const char* name, 
+                     float* value, 
+                     const ImVec4& color, 
+                     const float& sensitivity=0.05f, 
+                     const float& width=100.0f)
+{
+    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 3));
+    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(2, 3));
+    ImGui::PushStyleColor(ImGuiCol_Button, color);
+    ImGui::PushStyleColor(ImGuiCol_ButtonActive, color);
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, color);
+
+    ImGui::SetNextItemWidth(20);
+    ImGui::Button(label);
+
+    ImGui::PopStyleColor(3);
+    ImGui::PopStyleVar();
+
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(width - 20);
+    bool result =  ImGui::DragFloat(name, value, sensitivity, 0.0f, 0.0f, "%.2f");
+    ImGui::PopStyleVar();
+    
+    return result;
+}
+
+
+bool DrawPositionControl(const std::string& name, float* position, const float& sensitivity=0.05f, const float& width=100.0f) 
+{
+    bool somethingChanged = false;
+
+    // X
+    somethingChanged |= DrawDragControl("X", (std::string("##PositionDragFloatX") + name).c_str(), 
+                                        position, 
+                                        ImVec4(0.8, 0.1, 0.1, 1.0),
+                                        sensitivity,
+                                        width);
+
+    // Y
+    ImGui::SameLine();
+    somethingChanged |= DrawDragControl("Y", (std::string("##PositionDragFloatY") + name).c_str(), 
+                                        &position[1], 
+                                        ImVec4(0.1, 0.6, 0.1, 1.0),
+                                        sensitivity,
+                                        width);
+
+    // Z
+    ImGui::SameLine();
+    somethingChanged |= DrawDragControl("Z", (std::string("##PositionDragFloatZ") + name).c_str(), 
+                                        &position[2], 
+                                        ImVec4(0.2, 0.2, 0.8, 1.0),
+                                        sensitivity,
+                                        width);
+
+    return somethingChanged;
+}
+
+bool DrawRadiusControl(const std::string& name, float* radius, const float& sensitivity=0.05f, const float& width=100.0f)
+{
+    return DrawDragControl("R", (std::string("##RadiusDragFloatY") + name).c_str(), 
+                           radius, 
+                           ImVec4(0.3, 0.3, 0.3, 1.0),
+                           sensitivity,
+                           width);
+}
+
+
+
+bool DrawStaticProvider(const LayerPtr& layer) 
+{
+    bool somethingChanged = false;
+    c3ga::MvecType types[] = {c3ga::MvecType::Point,
+                              c3ga::MvecType::Sphere,
+                              c3ga::MvecType::DualSphere};
+    const char* typeNames[] = {"Point",
+                               "Sphere",
+                               "DualSphere"};
+    auto& objects = layer->GetObjects();
+
+    for (size_t i=0 ; i < objects.size() ; )
+    {
+        auto& obj = objects[i];
+        c3ga::MvecType objType = c3ga::getTypeOf(obj);
+        std::string objTypeName = c3ga::typeToName(objType);
+
+
+        // Type combo box
+        std::string suffix = layer->GetName() + std::to_string(i);
+        ImGui::SetNextItemWidth(100);
+        if (ImGui::BeginCombo((std::string("##ObjTypeCombo") + suffix).c_str(), objTypeName.c_str()))
+        {
+            for (size_t i=0 ; i < IM_ARRAYSIZE(typeNames) ; i++)
+            {
+                bool selected = objTypeName == typeNames[i];
+                if (ImGui::Selectable(typeNames[i], selected) && !selected) {
+                    obj = ConvertMvecToType(obj, objType, types[i]);
+                    objType = types[i];
+                    somethingChanged = true;
+                }
+
+                if (selected)
+                    ImGui::SetItemDefaultFocus();  
+            }
+            ImGui::EndCombo();
+        }
+
+        // Details
+        float availableWidth = ImGui::GetContentRegionAvail().x - 100.0f - 24.0f;
+        float sensitivity = 0.05f;
+        switch (objType)
+        {
+            case c3ga::MvecType::Point: {
+                float position[3] = {(float)obj[c3ga::E1], (float)obj[c3ga::E2], (float)obj[c3ga::E3]};
+                ImGui::SameLine();
+                if (DrawPositionControl(suffix, position, sensitivity, availableWidth / 3.0f)) {
+                    obj[c3ga::E1] = (double)position[0];
+                    obj[c3ga::E2] = (double)position[1];
+                    obj[c3ga::E3] = (double)position[2];
+                    somethingChanged = true;
+                }
+                break;
+            }
+
+            case c3ga::MvecType::Sphere:
+            case c3ga::MvecType::ImaginarySphere: {
+                c3ga::Mvec<double> c;
+                double r;
+                c3ga::radiusAndCenterFromDualSphere(obj.dual(), r, c);
+                r = -r;
+
+                ImGui::SameLine();
+                float center[3] = {(float)c[c3ga::E1], (float)c[c3ga::E2], (float)c[c3ga::E3]};
+                bool sphereChanged = DrawPositionControl(suffix, center, sensitivity, availableWidth / 4.0f);
+
+                ImGui::SameLine();
+                float radius = (float)r;
+                sphereChanged |= DrawRadiusControl(suffix, &radius, sensitivity, availableWidth / 4.0f);
+                if (radius == 0.0)
+                    radius = 1e-6;
+
+                if (sphereChanged) {
+                    obj = c3ga::dualSphere((double)center[0], 
+                                           (double)center[1], 
+                                           (double)center[2], 
+                                           (double)radius).dual();
+                    somethingChanged = true;
+                }
+
+                break;
+            }
+            
+            case c3ga::MvecType::DualSphere:
+            case c3ga::MvecType::ImaginaryDualSphere: {
+                c3ga::Mvec<double> c;
+                double r;
+                c3ga::radiusAndCenterFromDualSphere(obj, r, c);
+                
+                ImGui::SameLine();
+                float center[3] = {(float)c[c3ga::E1], (float)c[c3ga::E2], (float)c[c3ga::E3]};
+                bool sphereChanged = DrawPositionControl(suffix, center, sensitivity, availableWidth / 4.0f);
+
+                ImGui::SameLine();
+                float radius = (float)r;
+                sphereChanged |= DrawRadiusControl(suffix, &radius, sensitivity, availableWidth / 4.0f);
+                if (radius == 0.0)
+                    radius = 1e-6;
+
+                if (sphereChanged) {
+                    obj = c3ga::dualSphere((double)center[0], 
+                                           (double)center[1], 
+                                           (double)center[2], 
+                                           (double)radius);
+                    somethingChanged = true;
+                }
+
+                break;
+            }
+        }
+
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(10.0f);
+        ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 1);
+        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(5, 2));
+        if (ImGui::Button((std::string("X##RemoveButton") + suffix).c_str()))
+        {
+            objects.erase(objects.begin() + i);
+            somethingChanged = true;
+        } else {
+            ++i;
+        }
+        ImGui::PopStyleVar();
+    }
+
+    if (ImGui::Button("+"))
+    {
+        objects.push_back(c3ga::randomPoint<double>());
+        somethingChanged = true;
+    }
+
+
+    return somethingChanged;
+}
+
+
 bool LayerStackWidget::DrawProvider(const LayerPtr& layer, 
-                                   const bool& isSelected, 
-                                   const bool& isSource)
+                                    const bool& isSelected, 
+                                    const bool& isSource)
 {
     const auto& layers = m_layerStack->GetLayers();
     auto sources = layer->GetSources();
@@ -369,6 +575,17 @@ bool LayerStackWidget::DrawProvider(const LayerPtr& layer,
     {
         switch (provider->GetType())
         {
+            case ProviderType_Static: {
+                ImGui::AlignTextToFramePadding();
+                ImGui::Text("Content :");
+
+                somethingChanged |= DrawStaticProvider(layer);
+                if (somethingChanged) {
+                    layer->SetDirty(true);
+                }
+
+                break;
+            }
             case ProviderType_Subset: {
                 ImGui::AlignTextToFramePadding();
                 ImGui::Text("Source :");
@@ -418,7 +635,7 @@ bool LayerStackWidget::DrawProvider(const LayerPtr& layer,
                 ImGui::AlignTextToFramePadding();
                 ImGui::Text("Operator :");
                 ImGui::SameLine();
-                sourcesChanged |= DrawOperatorComboBox(layer, std::dynamic_pointer_cast<OperatorBasedProvider>(provider));
+                somethingChanged |= DrawOperatorComboBox(layer, std::dynamic_pointer_cast<OperatorBasedProvider>(provider));
 
                 break;
             }

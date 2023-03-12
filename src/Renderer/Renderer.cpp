@@ -190,13 +190,11 @@ void Renderer::BuildBatches(const LayerStackPtr& layerStack)
                 }
 
                 case c3ga::MvecType::Sphere: {
-                    // Temporary rendering points instead of sphere for debug purpose
                     spheres.push_back(extractDualSphereMatrix(obj.dual()));
                     break;
                 }
 
                 case c3ga::MvecType::DualSphere: {
-                    // Temporary rendering points instead of sphere for debug purpose
                     spheres.push_back(extractDualSphereMatrix(obj));
                     break;
                 }
