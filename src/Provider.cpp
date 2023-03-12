@@ -8,7 +8,7 @@
 
 void RandomGenerator::Compute(Layer& layer) 
 {
-    if (!m_isDirty)
+    if (m_isDirty)
     {
         auto& objects = layer.GetObjects();
         objects.clear();
@@ -17,7 +17,7 @@ void RandomGenerator::Compute(Layer& layer)
             case ObjectType::Point:
             {
                 for (size_t i=0 ; i < m_count ; ++i)
-                    objects.push_back(c3ga::randomPoint<double>());
+                    objects.push_back(c3ga::randomPoint<double>() * m_extents);
 
                 break;
             }
@@ -25,7 +25,7 @@ void RandomGenerator::Compute(Layer& layer)
             {
                 for (size_t i=0 ; i < m_count ; ++i)
                 {
-		            std::uniform_real_distribution<double> distrib(-1.0,1.0);
+		            std::uniform_real_distribution<double> distrib(-m_extents, m_extents);
                     objects.push_back(c3ga::dualSphere<double>(distrib(c3ga::generator),
                                                                distrib(c3ga::generator), 
                                                                distrib(c3ga::generator), 
@@ -34,16 +34,21 @@ void RandomGenerator::Compute(Layer& layer)
 
                 break;
             }
+            case ObjectType::DualSphere:
+            {
+                for (size_t i=0 ; i < m_count ; ++i)
+                {
+		            std::uniform_real_distribution<double> distrib(-m_extents, m_extents);
+                    objects.push_back(c3ga::dualSphere<double>(distrib(c3ga::generator),
+                                                               distrib(c3ga::generator), 
+                                                               distrib(c3ga::generator), 
+                                                               1.0));
+                }
+
+                break;
+            }
         }
     }
-}
-
-// == OperatorBasedProvider ==
-
-void OperatorBasedProvider::SetOperator(const Operator& op)
-{
-    if (m_op != op)
-        m_op = op;
 }
 
 // == Subset ==
@@ -64,6 +69,14 @@ void Subset::Compute(Layer& layer)
 
     auto& objects = layer.GetObjects();
     objects = MvecArray(sourceObjs.begin(), sourceObjs.begin() + count);
+}
+
+// == OperatorBasedProvider ==
+
+void OperatorBasedProvider::SetOperator(const Operator& op)
+{
+    if (m_op != op)
+        m_op = op;
 }
 
 // == SelfCombination ==

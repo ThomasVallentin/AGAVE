@@ -404,6 +404,9 @@ bool DrawStaticProvider(const LayerPtr& layer)
                                "DualSphere"};
     auto& objects = layer->GetObjects();
 
+    ImGui::AlignTextToFramePadding();
+    ImGui::Text("Content :");
+
     for (size_t i=0 ; i < objects.size() ; )
     {
         auto& obj = objects[i];
@@ -526,10 +529,103 @@ bool DrawStaticProvider(const LayerPtr& layer)
         somethingChanged = true;
     }
 
+    if (somethingChanged) {
+        layer->SetDirty(true);
+    }
 
     return somethingChanged;
 }
 
+
+// == RandomGenerator ==
+
+bool DrawRandomGenerator(const LayerPtr& layer)
+{
+    bool somethingChanged = false;
+    auto provider = std::dynamic_pointer_cast<RandomGenerator>(layer->GetProvider());
+    std::string suffix = layer->GetName();
+
+    // ObjectType combo box
+    c3ga::MvecType types[] = {c3ga::MvecType::Point,
+                              c3ga::MvecType::Sphere,
+                              c3ga::MvecType::DualSphere};
+    const char* typeNames[] = {"Point",
+                               "Sphere",
+                               "DualSphere"};
+
+    c3ga::MvecType objType = provider->GetObjectType();
+    const char* objTypeName = c3ga::typeToName(objType).c_str();
+
+    ImGui::AlignTextToFramePadding();
+    ImGui::Text("Type :");
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(100);
+    if (ImGui::BeginCombo((std::string("##RandomGeneratorObjTypeCombo") + suffix).c_str(), objTypeName))
+    {
+        for (size_t i=0 ; i < IM_ARRAYSIZE(typeNames) ; i++)
+        {
+            bool selected = objTypeName == typeNames[i];
+            if (ImGui::Selectable(typeNames[i], selected) && !selected) {
+                provider->SetObjectType(types[i]);
+                layer->SetDirty(true);
+                somethingChanged = true;
+            }
+
+            if (selected)
+                ImGui::SetItemDefaultFocus();  
+        }
+        ImGui::EndCombo();
+    }
+
+    int count = provider->GetCount();
+    ImGui::AlignTextToFramePadding();
+    ImGui::Text("Count :");
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(75);
+    if (ImGui::DragInt((std::string("##RandomGeneratorCountDrag") + suffix).c_str(), &count, 0.05f, 0, 10000))
+    {
+        provider->SetCount(count);
+        layer->SetDirty(true);
+        somethingChanged = true;
+    }
+
+    float extents = provider->GetExtents();
+    ImGui::AlignTextToFramePadding();
+    ImGui::Text("Extents :");
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(75);
+    if (ImGui::DragFloat((std::string("##RandomGeneratorExtentsDrag") + suffix).c_str(), &extents, 0.05f))
+    {
+        provider->SetExtents(extents);
+        layer->SetDirty(true);
+        somethingChanged = true;
+    }
+
+    return somethingChanged;
+}
+
+
+// == Subset ==
+
+bool DrawSubsetProvider(const LayerPtr& layer)
+{
+    auto provider = std::dynamic_pointer_cast<Subset>(layer->GetProvider());
+    int count = provider->GetCount();
+
+    ImGui::AlignTextToFramePadding();
+    ImGui::Text("Count:");
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(75);
+    if (ImGui::DragInt((std::string("##SubsetCountDrag") + layer->GetName()).c_str(), &count, 0.05f, 0, 1000))
+    {
+        provider->SetCount(count);
+        layer->SetDirty(true);
+        return true;
+    }
+
+    return false;
+}
+ 
 
 // == Sources ==
 
@@ -569,13 +665,13 @@ bool LayerStackWidget::DrawLayerContent(const LayerPtr& layer,
     const auto& layers = m_layerStack->GetLayers();
     auto sources = layer->GetSources();
 
-    bool somethingChanged;
+    bool somethingChanged = false;
 
     // Provider
     ImGui::AlignTextToFramePadding();
     ImGui::Text("Provider :");
     ImGui::SameLine();
-    if (somethingChanged = DrawProviderComboBox(layer)) {
+    if (somethingChanged |= DrawProviderComboBox(layer)) {
         UpdateSources();
     }
 
@@ -587,16 +683,15 @@ bool LayerStackWidget::DrawLayerContent(const LayerPtr& layer,
         switch (provider->GetType())
         {
             case ProviderType_Static: {
-                ImGui::AlignTextToFramePadding();
-                ImGui::Text("Content :");
-
                 somethingChanged |= DrawStaticProvider(layer);
-                if (somethingChanged) {
-                    layer->SetDirty(true);
-                }
-
                 break;
             }
+
+            case ProviderType_RandomGenerator: {
+                somethingChanged |= DrawRandomGenerator(layer);
+                break;
+            }
+
             case ProviderType_Subset: {
                 ImGui::AlignTextToFramePadding();
                 ImGui::Text("Source :");
@@ -606,6 +701,8 @@ bool LayerStackWidget::DrawLayerContent(const LayerPtr& layer,
                     sources.resize(1);
 
                 sourcesChanged |= DrawSourceComboBox(layers, layer, sources[0], 0);
+
+                sourcesChanged |= DrawSubsetProvider(layer);
 
                 break;
             }
