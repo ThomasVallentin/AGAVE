@@ -75,7 +75,7 @@ LayerPtr LayerStack::NewSubset(const std::string& name,
                                const int& count,
                                const Operator& op)
 {
-    MappingPtr subset = std::make_shared<Subset>(dimension, count);
+    ProviderPtr subset = std::make_shared<Subset>(dimension, count);
     LayerPtr layer = std::make_shared<Layer>(name, subset, op);
     layer->AddSource(source);
     source->AddDestination(layer);
@@ -89,7 +89,7 @@ LayerPtr LayerStack::NewCombination(const std::string& name,
                                     const LayerPtr& source2,
                                     const Operator& op)
 {
-    MappingPtr combination = std::make_shared<Combination>();
+    ProviderPtr combination = std::make_shared<Combination>();
     LayerPtr layer = std::make_shared<Layer>(name, combination, op);
     layer->AddSource(source1);
     layer->AddSource(source2);

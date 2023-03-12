@@ -13,7 +13,7 @@ using Operator = c3ga::Mvec<double>(*)(const c3ga::Mvec<double>&, const c3ga::Mv
 
 class Layer;
 class Layer;
-class Mapping; 
+class Provider; 
 class Copy; 
 class Subset; 
 class Combination;
@@ -23,15 +23,15 @@ using LayerWeakPtr = std::weak_ptr<Layer>;
 using LayerPtrArray = std::vector<LayerPtr>;
 using LayerWeakPtrArray = std::vector<LayerWeakPtr>;
 
-using MappingPtr = std::shared_ptr<Mapping>;
-using MappingWeakPtr = std::weak_ptr<Mapping>;
+using ProviderPtr = std::shared_ptr<Provider>;
+using ProviderWeakPtr = std::weak_ptr<Provider>;
 
 
 class Layer
 {
 public:
     Layer(const std::string& name, const MvecArray& objects);
-    Layer(const std::string& name, const MappingPtr& mapping, const Operator& op);
+    Layer(const std::string& name, const ProviderPtr& provider, const Operator& op);
     ~Layer() = default;
 
     inline std::string GetName() const { return m_name; }
@@ -59,8 +59,8 @@ public:
     inline Operator GetOperator() const { return m_op; }
     void SetOperator(const Operator& op);
 
-    inline MappingPtr GetMapping() const { return m_mapping; }
-    void SetMapping(const MappingPtr& mapping);
+    inline ProviderPtr GetProvider() const { return m_provider; }
+    void SetProvider(const ProviderPtr& provider);
 
     inline bool IsVisible() const { return m_visibility; }
     inline bool& GetVisiblity() { return m_visibility; }
@@ -89,7 +89,7 @@ private:
     bool m_visibility;
 
     MvecArray m_objects;
-    MappingPtr m_mapping;
+    ProviderPtr m_provider;
     Operator m_op;
 
     LayerWeakPtrArray m_sources;
@@ -98,33 +98,33 @@ private:
 };
 
 
-enum MappingType
+enum ProviderType
 {
-    NoMapping = 0,
-    CopyMapping,
-    SubsetMapping,
-    CombinationMapping,
+    NoProvider = 0,
+    CopyProvider,
+    SubsetProvider,
+    CombinationProvider,
 };
 
-class Mapping
+class Provider
 {
 public:
     virtual void Compute(const Operator& op, Layer& layer) = 0;
-    virtual MappingType GetType() const = 0;
+    virtual ProviderType GetType() const = 0;
     virtual inline uint32_t GetSourceCount() const { return 0; }
 };
 
-class Copy : public Mapping
+class Copy : public Provider
 {
 public:
     Copy() = default;
 
     void Compute(const Operator& op, Layer& layer) override {}
-    inline MappingType GetType() const override { return MappingType::CopyMapping; }
+    inline ProviderType GetType() const override { return ProviderType::CopyProvider; }
     inline uint32_t GetSourceCount() const override { return 1; }
 };
 
-class Subset : public Mapping
+class Subset : public Provider
 {
 public:
     Subset() : m_dimension(0), m_count(-1) {}
@@ -140,7 +140,7 @@ public:
     inline void SetDimension(const uint8_t& dimension) { m_dimension = dimension; }
 
     void Compute(const Operator& op, Layer& layer) override;
-    inline MappingType GetType() const override { return MappingType::SubsetMapping; }
+    inline ProviderType GetType() const override { return ProviderType::SubsetProvider; }
     inline uint32_t GetSourceCount() const override { return 1; }
 
 private:
@@ -152,13 +152,13 @@ private:
 };
 
 
-class Combination : public Mapping
+class Combination : public Provider
 {
 public:
     Combination() = default;
 
     void Compute(const Operator& op, Layer& layer) override;
-    inline MappingType GetType() const override { return MappingType::CombinationMapping; }
+    inline ProviderType GetType() const override { return ProviderType::CombinationProvider; }
     inline uint32_t GetSourceCount() const override { return 2; }
 };
 

@@ -15,17 +15,17 @@ Layer::Layer(const std::string& name,
         m_name(name), 
         m_visibility(true), 
         m_objects(objects), 
-        m_mapping(new Copy())
+        m_provider(new Copy())
 {
 
 }
 
 Layer::Layer(const std::string& name, 
-             const MappingPtr& mapping, 
+             const ProviderPtr& provider, 
              const Operator& op) :
         m_name(name), 
         m_visibility(true), 
-        m_mapping(mapping), 
+        m_provider(provider), 
         m_op(op) 
 {
 
@@ -193,11 +193,11 @@ void Layer::SetOperator(const Operator& op)
     }
 }
 
-void Layer::SetMapping(const MappingPtr& mapping)
+void Layer::SetProvider(const ProviderPtr& provider)
 {
-    if (m_mapping != mapping)
+    if (m_provider != provider)
     {
-        m_mapping = mapping;
+        m_provider = provider;
         SetDirty(true);
     }
 }
@@ -209,7 +209,7 @@ bool Layer::Update()
         return false;
     }
 
-    if (!m_mapping)
+    if (!m_provider)
     {
         m_objects.clear();
         m_isDirty = false;
@@ -225,7 +225,7 @@ bool Layer::Update()
         }
     }
 
-    m_mapping->Compute(m_op, *this);
+    m_provider->Compute(m_op, *this);
     SetDirty(false);
 
     return true;

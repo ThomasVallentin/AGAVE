@@ -209,7 +209,7 @@ bool LayerStackWidget::DrawLayer(const LayerPtr& layer, const int& index)
 
     // Draw the extended data if the item is expanded
     if (opened) {
-        somethingChanged |= DrawMapping(layer, isSelected, isSource);
+        somethingChanged |= DrawProvider(layer, isSelected, isSource);
         ImGui::TreePop();
     }
 
@@ -217,38 +217,38 @@ bool LayerStackWidget::DrawLayer(const LayerPtr& layer, const int& index)
 }
 
 
-bool DrawMappingComboBox(const LayerPtr& layer)
+bool DrawProviderComboBox(const LayerPtr& layer)
 {
     bool somethingChanged = false;
 
-    const char* mappingNames[] = {"None (empty result)",
+    const char* providerNames[] = {"None (empty result)",
                                   "Copy",
                                   "Subset",
                                   "Combination"};
-    auto createMapping = [](const uint32_t& index) -> MappingPtr
+    auto createProvider = [](const uint32_t& index) -> ProviderPtr
     {
         switch (index)
         {
-            case MappingType::CopyMapping:
+            case ProviderType::CopyProvider:
                 return std::make_shared<Copy>();
-            case MappingType::SubsetMapping:
+            case ProviderType::SubsetProvider:
                 return std::make_shared<Subset>();
-            case MappingType::CombinationMapping:
+            case ProviderType::CombinationProvider:
                 return std::make_shared<Combination>();
         }
 
         return nullptr;
     };
 
-    auto mapping = layer->GetMapping();
-    uint32_t currentIndex = mapping ? mapping->GetType() : MappingType::NoMapping;
-    if (ImGui::BeginCombo((std::string("##MappingCombo") + layer->GetName()).c_str(), mappingNames[currentIndex]))
+    auto provider = layer->GetProvider();
+    uint32_t currentIndex = provider ? provider->GetType() : ProviderType::NoProvider;
+    if (ImGui::BeginCombo((std::string("##ProviderCombo") + layer->GetName()).c_str(), providerNames[currentIndex]))
     {
-        for (size_t i=0 ; i < IM_ARRAYSIZE(mappingNames) ; ++i)
+        for (size_t i=0 ; i < IM_ARRAYSIZE(providerNames) ; ++i)
         {
             bool selected = i == currentIndex;
-            if (ImGui::Selectable(mappingNames[i], selected)) {
-                layer->SetMapping(createMapping(i));
+            if (ImGui::Selectable(providerNames[i], selected)) {
+                layer->SetProvider(createProvider(i));
                 somethingChanged = true;
             }
 
@@ -343,7 +343,7 @@ bool DrawSourceComboBox(const LayerPtrArray& layers, const LayerPtr& currentLaye
 }
 
 
-bool LayerStackWidget::DrawMapping(const LayerPtr& layer, 
+bool LayerStackWidget::DrawProvider(const LayerPtr& layer, 
                                    const bool& isSelected, 
                                    const bool& isSource)
 {
@@ -352,22 +352,22 @@ bool LayerStackWidget::DrawMapping(const LayerPtr& layer,
 
     bool somethingChanged;
 
-    // Mapping
+    // Provider
     ImGui::AlignTextToFramePadding();
-    ImGui::Text("Mapping :");
+    ImGui::Text("Provider :");
     ImGui::SameLine();
-    if (somethingChanged = DrawMappingComboBox(layer)) {
+    if (somethingChanged = DrawProviderComboBox(layer)) {
         UpdateSources();
     }
 
     // Sources
     bool sourcesChanged = false;
-    auto mapping = layer->GetMapping();
-    if (mapping)
+    auto provider = layer->GetProvider();
+    if (provider)
     {
-        switch (mapping->GetType())
+        switch (provider->GetType())
         {
-            case MappingType::CopyMapping: {
+            case ProviderType::CopyProvider: {
                 ImGui::AlignTextToFramePadding();
                 ImGui::Text("Source :");
                 ImGui::SameLine();
@@ -380,7 +380,7 @@ bool LayerStackWidget::DrawMapping(const LayerPtr& layer,
                 break;
             }
 
-            case MappingType::SubsetMapping: {
+            case ProviderType::SubsetProvider: {
                 ImGui::AlignTextToFramePadding();
                 ImGui::Text("Source :");
                 ImGui::SameLine();
@@ -393,7 +393,7 @@ bool LayerStackWidget::DrawMapping(const LayerPtr& layer,
                 break;
             }
 
-            case MappingType::CombinationMapping: {
+            case ProviderType::CombinationProvider: {
                 ImGui::AlignTextToFramePadding();
                 ImGui::Text("Source 1 :");
                 ImGui::SameLine();
@@ -482,12 +482,12 @@ void LayerStackWidget::UpdateSources()
     m_sources.clear();
     for (const auto& layer : m_selection)
     {
-        auto mapping = layer->GetMapping();
-        if (!mapping)
+        auto provider = layer->GetProvider();
+        if (!provider)
             continue;
 
         const auto& sources = layer->GetSources();
-        uint32_t sourceCount = std::min(mapping->GetSourceCount(), 
+        uint32_t sourceCount = std::min(provider->GetSourceCount(), 
                                         (uint32_t)sources.size());
 
         for (uint32_t i=0 ; i < sourceCount ; ++i)
