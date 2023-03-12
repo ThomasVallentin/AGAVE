@@ -38,7 +38,7 @@ public:
 
     inline const MvecArray& GetObjects() const { return m_objects; }
     inline MvecArray& GetObjects() { return m_objects; }
-    inline void Set(const MvecArray& objects) { m_objects = objects; }
+    inline void SetObjects(const MvecArray& objects) { m_objects = objects; SetDirty(true); }
     inline c3ga::Mvec<double>& operator[](const uint32_t& idx) { return m_objects[idx]; }
     inline const c3ga::Mvec<double>& operator[](const uint32_t& idx) const { return m_objects[idx]; }
     inline void Clear() { m_objects.clear(); }

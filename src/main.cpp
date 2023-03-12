@@ -45,15 +45,11 @@ int main(int argc, char* argv[])
 
     LayerStackPtr stack = std::make_shared<LayerStack>();
 
-    MvecArray objects;
-    for (int i = 0 ; i < 5 ; ++i)
-    {
-        objects.push_back(c3ga::randomPoint<double>());
-    }
+    MvecArray objects = {c3ga::dualSphere<double>(0, 0, 0, 1).dual()};
     auto lyr1 = stack->NewLayer("Layer1", objects);
-    auto lyr2 = stack->NewSubset("Layer2", lyr1, 4, -1, Layer::OuterOp);
-    auto lyr3 = stack->NewSubset("Layer3", lyr1, 4, 2, Layer::OuterOp);
-    auto lyr4 = stack->NewCombination("Layer4", lyr2, lyr3, Layer::OuterOp);
+    objects = {c3ga::dualSphere<double>(0, 1, 0, 1).dual()};
+    auto lyr2 = stack->NewLayer("Layer2", objects);
+    auto lyr3 = stack->NewCombination("Layer3", lyr1, lyr2, Layer::OuterOp);
 
     Renderer renderer;
 
@@ -65,6 +61,8 @@ int main(int argc, char* argv[])
     while (!window.ShouldClose()) {
         currTime = window.GetTime();
 
+        // objects[0] = c3ga::point<double>(-0.562082, -0.0826997, std::sin(currTime));
+        // lyr1->SetObjects(objects);
         // engine.Update(currTime - prevTime);
 
  	    // vbo->Bind();

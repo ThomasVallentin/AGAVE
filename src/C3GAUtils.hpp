@@ -275,7 +275,7 @@ glm::mat4 extractDualSphereMatrix(const Mvec<T>& dualSphere)
     std::cout << whoAmI(dualSphere) << std::endl; 
 
     glm::mat4 t = glm::translate(glm::mat4(1.0f), {center[E1], center[E2], center[E3]});
-    glm::mat4 s = glm::scale(glm::mat4(1.0f), glm::vec3(std::abs(radius)));
+    glm::mat4 s = glm::scale(glm::mat4(1.0f), glm::vec3(radius));
 
     std::cout << glm::to_string(t * s) << std::endl;
     return t * s;
