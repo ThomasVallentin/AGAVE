@@ -1,5 +1,7 @@
-#ifndef SIMULATION_H
-#define SIMULATION_H
+#ifndef SIMULATION_HPP
+#define SIMULATION_HPP
+
+#include "Layer.hpp"
 
 #include <c3ga/Mvec.hpp>
 
@@ -29,8 +31,10 @@ inline Force LinearForce(c3ga::Mvec<float> force) {
 class SimulationEngine
 {
 public:
-    SimulationEngine();
-    ~SimulationEngine();
+    static SimulationEngine& Init();
+    inline static SimulationEngine& Get() { return *s_instance; }
+
+    void AddLayer(const LayerPtr& layer);
 
     void Update(const double& deltaTime);
     void ComputeIntersections(Object& object);
@@ -38,6 +42,11 @@ public:
     inline const std::vector<Object>& GetObjects() const { return m_objects; }
 
 private:
+    SimulationEngine();
+    ~SimulationEngine();
+
+    static SimulationEngine* s_instance;
+
     std::vector<Object> m_objects;
     std::vector<Force> m_forces;
 };

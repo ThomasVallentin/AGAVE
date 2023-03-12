@@ -4,6 +4,17 @@
 #include <random>
 
 
+SimulationEngine* SimulationEngine::s_instance = nullptr;
+
+
+SimulationEngine& SimulationEngine::Init()
+{
+    if (!s_instance)
+        s_instance = new SimulationEngine();
+
+    return *s_instance;
+}
+
 SimulationEngine::SimulationEngine() :
     m_forces({})
 {
@@ -15,7 +26,6 @@ SimulationEngine::~SimulationEngine()
 
 void SimulationEngine::Update(const double &deltaTime)
 {
-
     for (auto& obj : m_objects) {
         for (auto& force : m_forces) {
             force(obj);

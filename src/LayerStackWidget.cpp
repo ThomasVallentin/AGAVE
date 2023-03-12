@@ -226,7 +226,7 @@ bool DrawProviderComboBox(const LayerPtr& layer)
     bool somethingChanged = false;
 
     const char* providerNames[] = {"None (empty layer)",
-                                   "Static",
+                                   "Explicit",
                                    "Random generator",
                                    "Subset",
                                    "Combination",
@@ -235,8 +235,8 @@ bool DrawProviderComboBox(const LayerPtr& layer)
     {
         switch (index)
         {
-            case ProviderType_Static:
-                return std::make_shared<Static>();
+            case ProviderType_Explicit:
+                return std::make_shared<Explicit>();
             case ProviderType_RandomGenerator:
                 return std::make_shared<RandomGenerator>();
             case ProviderType_Subset:
@@ -327,7 +327,7 @@ bool DrawOperatorComboBox(const LayerPtr& layer, const std::shared_ptr<OperatorB
 }
 
 
-// == Static provider content ==
+// == Explicit provider content ==
 
 bool DrawDragControl(const char* label, 
                      const char* name, 
@@ -395,7 +395,7 @@ bool DrawRadiusControl(const std::string& name, float* radius, const float& sens
                            width);
 }
 
-bool DrawStaticProvider(const LayerPtr& layer) 
+bool DrawExplicitProvider(const LayerPtr& layer) 
 {
     bool somethingChanged = false;
     c3ga::MvecType types[] = {c3ga::MvecType::Point,
@@ -687,8 +687,8 @@ bool LayerStackWidget::DrawLayerContent(const LayerPtr& layer,
     {
         switch (provider->GetType())
         {
-            case ProviderType_Static: {
-                somethingChanged |= DrawStaticProvider(layer);
+            case ProviderType_Explicit: {
+                somethingChanged |= DrawExplicitProvider(layer);
                 break;
             }
 

@@ -1,10 +1,18 @@
 #include "Provider.hpp"
 
+#include "Simulation.hpp"
+
 #include "c3gaTools.hpp"
 
 #include <random>
 
-// == RandomGenerator ==
+// == Explicit Provider ==
+
+void SetAnimated(const bool& animated) {
+    
+}
+
+// == Random Generator ==
 
 void RandomGenerator::Compute(Layer& layer) 
 {
@@ -71,7 +79,7 @@ void Subset::Compute(Layer& layer)
     objects = MvecArray(sourceObjs.begin(), sourceObjs.begin() + count);
 }
 
-// == OperatorBasedProvider ==
+// == Operator Based Provider ==
 
 void OperatorBasedProvider::SetOperator(const Operator& op)
 {
@@ -79,7 +87,7 @@ void OperatorBasedProvider::SetOperator(const Operator& op)
         m_op = op;
 }
 
-// == SelfCombination ==
+// == Self Combination ==
 
 // Get all order independent combinations of integers.
 // This code is adapted from https://rosettacode.org/wiki/Combinations

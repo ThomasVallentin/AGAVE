@@ -25,7 +25,7 @@ namespace Operators {
 enum ProviderType
 {
     ProviderType_None = 0,
-    ProviderType_Static,
+    ProviderType_Explicit,
     ProviderType_RandomGenerator,
     ProviderType_Subset,
     ProviderType_Combination,
@@ -41,19 +41,21 @@ public:
 };
 
 
-class Static : public Provider
+class Explicit : public Provider
 {
 public:
+    inline bool IsAnimated() const { return m_animated; }
+    void SetAnimated(const bool& animated);
 
-    void Compute(Layer& layer) override {};
-    inline ProviderType GetType() const override { return ProviderType_Static; };
+    inline void Compute(Layer& layer) override {};
+    inline ProviderType GetType() const override { return ProviderType_Explicit; };
     inline uint32_t GetSourceCount() const override { return 0; }
 
 private:
-    MvecArray m_objects;
+    bool m_animated;
 };
 
-class RandomGenerator : public Provider
+class RandomGenerator : public Explicit
 {
 public:
     RandomGenerator() : 

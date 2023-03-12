@@ -16,7 +16,7 @@ Layer::Layer(const std::string& name,
         m_name(name), 
         m_visibility(true), 
         m_objects(objects), 
-        m_provider(new Static())
+        m_provider(new Explicit())
 {
 
 }
