@@ -1,5 +1,6 @@
 #version 460 core
 
+uniform vec4 uColor = vec4(1, 0, 0, 1);
 
 in VertexData
 {
@@ -12,5 +13,5 @@ out vec4 fColor;
 
 void main() 
 {
-    fColor = vec4(1.0, 0.0, 0.0, 1.0);
+    fColor = uColor;
 }

@@ -3,6 +3,7 @@
 #include "Base/Logging.h"
 
 #include <c3gaTools.hpp>
+#include <C3GAUtils.hpp>
 
 #include <random>
 
@@ -232,54 +233,69 @@ bool Layer::Update()
 
 // == Subset ==
 
+
+// Get all order independent combinations of integers.
+// This code is adapted from https://rosettacode.org/wiki/Combinations
+std::vector<std::vector<uint32_t>> GetIntegerCombinations(const uint32_t& maxIndex, const uint32_t& combinationSize)
+{
+    std::string bitmask(combinationSize, 1);
+    bitmask.resize(maxIndex, 0);
+
+    std::vector<std::vector<uint32_t>> result;
+    do {
+        std::vector<uint32_t> combination(combinationSize);
+        uint32_t currIdx = 0;
+        for (uint32_t i = 0; i < maxIndex; ++i)
+        {
+            if (bitmask[i])
+                combination[currIdx++] = i;
+        }
+        result.push_back(combination);
+    } while (std::prev_permutation(bitmask.begin(), bitmask.end()));
+    
+    return result;
+}
+
 void Subset::Compute(const Operator& op, Layer& layer) 
 {
-    auto sources = layer.GetSources();
-    LayerPtr sourcePtr = nullptr;
-    for (uint i = 0 ; i < sources.size() & !sourcePtr ; ++i) {
-        sourcePtr = sources[i].lock();
-    }
 
-    if (!m_count || !m_dimension || !sourcePtr)
+    auto sources = layer.GetSources();
+    if (!m_count || !m_dimension || !op || sources.empty())
     {
         layer.Clear();
         return;
     }
 
-    const auto& sourceObjs = sourcePtr->GetObjects(); 
-    uint32_t count = m_count > 0 ? std::min(sourceObjs.size(), (size_t)m_count) : sourceObjs.size();
-    uint32_t indicesCount = count * m_dimension;
+    const auto& source = sources[0].lock();
+    const auto& sourceObjs = source->GetObjects(); 
+    uint32_t sourceObjCount = sourceObjs.size();
 
-    if (m_indices.empty() || indicesCount != m_indices.size())
+    MvecArray& result = layer.GetObjects();
+    uint32_t outObjCount;
+
+    if (m_indices.empty() || 
+        m_prevCount != m_count || 
+        m_prevDim != m_dimension || 
+        m_prevSourceCount != sourceObjCount)
     {
         // Generate random samples
         std::random_device device;
         std::mt19937 engine(device());
-        std::uniform_int_distribution<uint32_t> distrib(0, sourceObjs.size() - 1);
 
-        m_indices.reserve(indicesCount);
-        for (uint i=0 ; i < indicesCount ; ++i)
+        auto combinations = GetIntegerCombinations(sourceObjs.size(), m_dimension);
+        std::shuffle(combinations.begin(), combinations.end(), engine);
+
+        outObjCount = m_count > 0 ? std::min((size_t)m_count, combinations.size()) : combinations.size();
+        m_indices.reserve(outObjCount * m_dimension);
+        for (uint i=0 ; i < outObjCount ; ++i)
         {
-            m_indices.push_back(distrib(engine));
+            for (const auto& index : combinations[i])
+                m_indices.push_back(index);
         }
-    }
-
-    MvecArray& result = layer.GetObjects();
-    result.resize(count);
-
-    // Identity case (no operator)
-    if (!op)
-    {
-        result.resize(count);
-        for (uint32_t i=0 ; i < count ; ++i)
-        {
-            result[i] = sourceObjs[i];
-        }
-
-        return;
     }
 
     // Apply operator for each count for each "dimension"
+    result.resize(outObjCount);
     uint idx = 0;
     for (auto& obj : result)
     {
@@ -292,8 +308,12 @@ void Subset::Compute(const Operator& op, Layer& layer)
             std::cout << m_indices[idx] << " ";
         }
         std::cout << c3ga::whoAmI(obj) << std::endl;
-        
+
     }
+
+    m_prevCount = m_count;
+    m_prevDim = m_dimension;
+    m_prevSourceCount = sources.size();
 }
 
 // == Combination ==

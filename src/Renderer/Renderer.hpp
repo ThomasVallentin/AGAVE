@@ -31,8 +31,8 @@ private:
     struct Batch
     {
         VertexArrayPtr vertexArray;
-        uint32_t instanceCount;
-        GLenum drawType;
+        uint32_t instanceCount = 0;
+        GLenum drawType = GL_TRIANGLES;
 
         void Render() const;
     };
@@ -46,7 +46,8 @@ private:
     VertexArrayPtr m_points;
     uint32_t m_pointCount = 0;
 
-    ShaderPtr m_shader;
+    ShaderPtr m_pointsShader;
+    ShaderPtr m_linesShader;
 
     bool m_isValid = false;
 };

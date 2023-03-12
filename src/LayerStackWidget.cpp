@@ -86,12 +86,13 @@ bool LayerStackWidget::Draw()
         Clear();
     }
 
+    bool somethingChanged = false;
     if (m_layerStack)
     {
         const auto& layers = m_layerStack->GetLayers();
         for (int i=0 ; i < layers.size() ; ++i)
         {
-            DrawLayer(layers[i], i);
+            somethingChanged |= DrawLayer(layers[i], i);
         }
     }
     else 
@@ -101,6 +102,8 @@ bool LayerStackWidget::Draw()
 
     ImGui::PopStyleColor(3);
     ImGui::End();
+
+    return somethingChanged;
 }
 
 bool LayerStackWidget::DrawLayer(const LayerPtr& layer, const int& index)

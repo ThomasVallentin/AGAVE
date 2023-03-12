@@ -7,8 +7,8 @@
 #include <memory>
 #include <functional>
 
-using MvecArray = std::vector<c3ga::Mvec<float>>;
-using Operator = c3ga::Mvec<float>(*)(const c3ga::Mvec<float>&, const c3ga::Mvec<float>&);
+using MvecArray = std::vector<c3ga::Mvec<double>>;
+using Operator = c3ga::Mvec<double>(*)(const c3ga::Mvec<double>&, const c3ga::Mvec<double>&);
 
 
 class Layer;
@@ -39,8 +39,8 @@ public:
     inline const MvecArray& GetObjects() const { return m_objects; }
     inline MvecArray& GetObjects() { return m_objects; }
     inline void Set(const MvecArray& objects) { m_objects = objects; }
-    inline c3ga::Mvec<float>& operator[](const uint32_t& idx) { return m_objects[idx]; }
-    inline const c3ga::Mvec<float>& operator[](const uint32_t& idx) const { return m_objects[idx]; }
+    inline c3ga::Mvec<double>& operator[](const uint32_t& idx) { return m_objects[idx]; }
+    inline const c3ga::Mvec<double>& operator[](const uint32_t& idx) const { return m_objects[idx]; }
     inline void Clear() { m_objects.clear(); }
 
     LayerWeakPtrArray GetSources() const;
@@ -77,12 +77,12 @@ public:
 
 public:
     // Operators
-    inline static c3ga::Mvec<float> InnerOp(const c3ga::Mvec<float>& first, 
-                                            const c3ga::Mvec<float>& second) { return first | second; }
-    inline static c3ga::Mvec<float> OuterOp(const c3ga::Mvec<float>& first, 
-                                            const c3ga::Mvec<float>& second) { return first ^ second; }
-    inline static c3ga::Mvec<float> GeomOp(const c3ga::Mvec<float>& first, 
-                                           const c3ga::Mvec<float>& second) { return first * second; }
+    inline static c3ga::Mvec<double> InnerOp(const c3ga::Mvec<double>& first, 
+                                            const c3ga::Mvec<double>& second) { return first | second; }
+    inline static c3ga::Mvec<double> OuterOp(const c3ga::Mvec<double>& first, 
+                                            const c3ga::Mvec<double>& second) { return first ^ second; }
+    inline static c3ga::Mvec<double> GeomOp(const c3ga::Mvec<double>& first, 
+                                           const c3ga::Mvec<double>& second) { return first * second; }
 
 private:
     std::string m_name;
@@ -148,6 +148,7 @@ private:
     uint32_t m_dimension;
 
     std::vector<uint32_t> m_indices;
+    uint32_t m_prevCount, m_prevDim, m_prevSourceCount;
 };
 
 
