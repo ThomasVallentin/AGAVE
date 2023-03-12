@@ -23,9 +23,16 @@ public:
 
     LayerPtr NewLayer(const std::string& name,
                       const MvecArray& objects);
+    LayerPtr NewRandomGenerator(const std::string& name,
+                                const c3ga::MvecType& objType=c3ga::MvecType::Point,
+                                const uint32_t& count=4,
+                                const float& extents=1.0f);
+    LayerPtr NewSubset(const std::string& name,
+                       const LayerPtr& source, 
+                       const uint32_t& count=-1);
     LayerPtr NewSelfCombination(const std::string& name,
                        const LayerPtr& source, 
-                       const uint32_t& dimension, 
+                       const uint32_t& dimension=2, 
                        const int& count=-1,
                        const Operator& op=Operators::OuterProduct);
     LayerPtr NewCombination(const std::string& name,
@@ -37,6 +44,8 @@ public:
     void DisconnectLayers(const LayerPtr& source, const LayerPtr& destination) const;
 
 private:
+    std::string GetNextAvailableName(std::string basename="Layer") const;
+    
     LayerPtrArray m_layers;
 };
 

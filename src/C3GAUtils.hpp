@@ -445,5 +445,4 @@ T extractDualSphereRadius(const Mvec<T>& dualSphere)
 } // namespace c3ga
 
 
-
 #endif // C3GAUTILS_H

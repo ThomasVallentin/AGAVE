@@ -14,14 +14,14 @@ void RandomGenerator::Compute(Layer& layer)
         objects.clear();
         switch (m_objType)
         {
-            case ObjectType::Point:
+            case c3ga::MvecType::Point:
             {
                 for (size_t i=0 ; i < m_count ; ++i)
                     objects.push_back(c3ga::randomPoint<double>() * m_extents);
 
                 break;
             }
-            case ObjectType::Sphere:
+            case c3ga::MvecType::Sphere:
             {
                 for (size_t i=0 ; i < m_count ; ++i)
                 {
@@ -34,7 +34,7 @@ void RandomGenerator::Compute(Layer& layer)
 
                 break;
             }
-            case ObjectType::DualSphere:
+            case c3ga::MvecType::DualSphere:
             {
                 for (size_t i=0 ; i < m_count ; ++i)
                 {

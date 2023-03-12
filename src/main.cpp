@@ -122,6 +122,7 @@ int main(int argc, char* argv[])
                 if(ImGui::MenuItem("Clear context##MainMenuClearAll")) 
                 {
                     layerStackWid.Clear();
+                    somethingChanged = true;
                 }
 
                 ImGui::EndMenu();
@@ -131,7 +132,7 @@ int main(int argc, char* argv[])
         }
 
         ImGui::End(); // Main Dockspace
-        ImGui::ShowDemoWindow();
+        // ImGui::ShowDemoWindow();
         somethingChanged |= layerStackWid.Draw();
 
         // // Render ImGui items

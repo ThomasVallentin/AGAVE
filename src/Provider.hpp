@@ -40,7 +40,6 @@ public:
     virtual inline uint32_t GetSourceCount() const { return 0; }
 };
 
-using ObjectType = c3ga::MvecType;
 
 class Static : public Provider
 {
@@ -57,14 +56,19 @@ private:
 class RandomGenerator : public Provider
 {
 public:
-    RandomGenerator() : m_objType(ObjectType::Point), m_count(4), m_extents(1.0) {}
-    RandomGenerator(const ObjectType& objType, const uint32_t& count=4) : 
+    RandomGenerator() : 
+            m_objType(c3ga::MvecType::Point), 
+            m_count(4), 
+            m_extents(1.0) {}
+    RandomGenerator(const c3ga::MvecType& objType, 
+                    const uint32_t& count=4, 
+                    const float& extents=1.0f) : 
            m_objType(objType), 
            m_count(count),
            m_extents(1.0) {}
 
-    inline ObjectType GetObjectType() const { return m_objType; }
-    inline void SetObjectType(const ObjectType& objType) { m_objType = objType; m_isDirty = true; }
+    inline c3ga::MvecType GetObjectType() const { return m_objType; }
+    inline void SetObjectType(const c3ga::MvecType& objType) { m_objType = objType; m_isDirty = true; }
 
     inline uint32_t GetCount() const { return m_count; }
     inline void SetCount(const uint32_t& count) { m_count = count; m_isDirty = true; }
@@ -79,7 +83,7 @@ public:
 private:
     bool m_isDirty = true;
     
-    ObjectType m_objType;
+    c3ga::MvecType m_objType;
     uint32_t m_count;
     float m_extents;
 };

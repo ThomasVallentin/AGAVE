@@ -57,19 +57,19 @@ bool LayerStackWidget::Draw()
         if (ImGui::BeginMenu("Create"))
         {
             if (ImGui::MenuItem("Layer"))
-            {
                 m_layerStack->NewLayer("Layer", {});
-            }
 
-            if (ImGui::MenuItem("SelfCombination", "", nullptr, m_selection.size() == 1))
-            {
-                m_layerStack->NewSelfCombination("Layer", m_selection[0], 0);
-            }
+            if (ImGui::MenuItem("Random generator"))
+                m_layerStack->NewRandomGenerator("Layer");
 
-            if (ImGui::MenuItem("Combination", "", nullptr, m_selection.size() == 2))
-            {
-                m_layerStack->NewCombination("Layer", m_selection[0], m_selection[1]);
-            }
+            if (ImGui::MenuItem("Subset", "", nullptr, m_selection.size() >= 1))
+                m_layerStack->NewSubset("Layer", m_selection.back());
+
+            if (ImGui::MenuItem("SelfCombination", "", nullptr, m_selection.size() >= 1))
+                m_layerStack->NewSelfCombination("Layer", m_selection.back());
+
+            if (ImGui::MenuItem("Combination", "", nullptr, m_selection.size() >= 2))
+                m_layerStack->NewCombination("Layer", m_selection[m_selection.size() - 2], m_selection.back());
 
             ImGui::EndMenu();
         }
@@ -81,12 +81,14 @@ bool LayerStackWidget::Draw()
     ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.27f, 0.27f, 0.27f, 1.00f));
     ImGui::PushStyleColor(ImGuiCol_HeaderActive,  ImVec4(0.09f, 0.09f, 0.09f, 1.00f));
 
+    bool somethingChanged = false;
+
     if (Inputs::IsKeyPressed(KeyCode::Delete)) 
     {
-        Clear();
+        DeleteSelectedLayers();
+        somethingChanged = true;
     }
 
-    bool somethingChanged = false;
     if (m_layerStack)
     {
         const auto& layers = m_layerStack->GetLayers();
@@ -397,8 +399,8 @@ bool DrawStaticProvider(const LayerPtr& layer)
 {
     bool somethingChanged = false;
     c3ga::MvecType types[] = {c3ga::MvecType::Point,
-                              c3ga::MvecType::Sphere,
-                              c3ga::MvecType::DualSphere};
+                          c3ga::MvecType::Sphere,
+                          c3ga::MvecType::DualSphere};
     const char* typeNames[] = {"Point",
                                "Sphere",
                                "DualSphere"};
@@ -616,7 +618,7 @@ bool DrawSubsetProvider(const LayerPtr& layer)
     ImGui::Text("Count:");
     ImGui::SameLine();
     ImGui::SetNextItemWidth(75);
-    if (ImGui::DragInt((std::string("##SubsetCountDrag") + layer->GetName()).c_str(), &count, 0.05f, 0, 1000))
+    if (ImGui::DragInt((std::string("##SubsetCountDrag") + layer->GetName()).c_str(), &count, 0.05f, -1, 1000))
     {
         provider->SetCount(count);
         layer->SetDirty(true);
@@ -657,6 +659,9 @@ bool DrawSourceComboBox(const LayerPtrArray& layers, const LayerPtr& currentLaye
 
     return somethingChanged;
 }
+
+
+// == Layer content ==
 
 bool LayerStackWidget::DrawLayerContent(const LayerPtr& layer, 
                                     const bool& isSelected, 
@@ -764,6 +769,9 @@ bool LayerStackWidget::DrawLayerContent(const LayerPtr& layer,
 
     return somethingChanged;
 }
+
+
+// == Selection management ==
 
 LayerPtrArray& LayerStackWidget::GetSelection() 
 {

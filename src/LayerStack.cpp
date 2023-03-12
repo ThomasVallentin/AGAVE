@@ -63,7 +63,32 @@ void LayerStack::Clear()
 LayerPtr LayerStack::NewLayer(const std::string& name,
                               const MvecArray& objects)
 {
-    LayerPtr layer = std::make_shared<Layer>(name, objects);
+    LayerPtr layer = std::make_shared<Layer>(GetNextAvailableName(name), objects);
+    m_layers.push_back(layer);
+
+    return layer;
+}
+
+LayerPtr LayerStack::NewRandomGenerator(const std::string& name,
+                                        const c3ga::MvecType& objType,
+                                        const uint32_t& count,
+                                        const float& extents)
+{
+    ProviderPtr provider = std::make_shared<RandomGenerator>(objType, count, extents);
+    LayerPtr layer = std::make_shared<Layer>(GetNextAvailableName(name), provider);
+    m_layers.push_back(layer);
+
+    return layer;
+}
+
+LayerPtr LayerStack::NewSubset(const std::string& name,
+                               const LayerPtr& source, 
+                               const uint32_t& count)
+{
+    ProviderPtr provider = std::make_shared<Subset>(count);
+    LayerPtr layer = std::make_shared<Layer>(GetNextAvailableName(name), provider);
+    layer->AddSource(source);
+    source->AddDestination(layer);
     m_layers.push_back(layer);
 
     return layer;
@@ -76,7 +101,7 @@ LayerPtr LayerStack::NewSelfCombination(const std::string& name,
                                const Operator& op)
 {
     ProviderPtr provider = std::make_shared<SelfCombination>(dimension, count, op);
-    LayerPtr layer = std::make_shared<Layer>(name, provider);
+    LayerPtr layer = std::make_shared<Layer>(GetNextAvailableName(name), provider);
     layer->AddSource(source);
     source->AddDestination(layer);
     m_layers.push_back(layer);
@@ -90,7 +115,7 @@ LayerPtr LayerStack::NewCombination(const std::string& name,
                                     const Operator& op)
 {
     ProviderPtr combination = std::make_shared<Combination>(op);
-    LayerPtr layer = std::make_shared<Layer>(name, combination);
+    LayerPtr layer = std::make_shared<Layer>(GetNextAvailableName(name), combination);
     layer->AddSource(source1);
     layer->AddSource(source2);
     source1->AddDestination(layer);
@@ -112,4 +137,22 @@ void LayerStack::DisconnectLayers(const LayerPtr& source, const LayerPtr& destin
     destination->RemoveSource(source);
     source->RemoveDestination(destination);
     destination->SetDirty(true);
+}
+
+std::string LayerStack::GetNextAvailableName(std::string basename) const
+{
+    auto alreadyExists = [&](const std::string& n)->bool {
+        for (const auto& layer : m_layers)
+            if (layer->GetName() == n)
+                return true;
+
+        return false;
+    };
+
+    int i = 1;
+    std::string name = basename;
+    while (alreadyExists(name)) 
+        name = basename + std::to_string(i++);
+
+    return name;
 }
