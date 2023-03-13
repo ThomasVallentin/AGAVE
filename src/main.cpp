@@ -43,7 +43,10 @@ int main(int argc, char* argv[])
     };
     window.SetEventCallback(eventCallback);
 
+    // Initialize the global "managers" 
     LayerStackPtr stack = std::make_shared<LayerStack>();
+    SimulationEngine& simEngine = SimulationEngine::Init();
+    Renderer renderer;
 
     // Generate the content of the scene
     MvecArray objects = {c3ga::dualSphere<double>(0, 0, 0, 1).dual()};
@@ -52,25 +55,28 @@ int main(int argc, char* argv[])
     auto lyr2 = stack->NewLayer("Layer2", objects);
     auto lyr3 = stack->NewCombination("Layer3", lyr1, lyr2, Operators::OuterProduct);
 
-    Renderer renderer;
-
     LayerStackWidget layerStackWid(stack);
 
     double prevTime = window.GetTime();
-    double currTime;
+    double currTime, deltaTime;
     bool somethingChanged = false;
     while (!window.ShouldClose()) {
         currTime = window.GetTime();
+        deltaTime = currTime - prevTime;
+
+        camera.Update();
+        simEngine.Update(deltaTime);
+
+        // Set dirty all the animated layers
+        for (const auto& layer : stack->GetLayers())
+            if (auto provider = std::dynamic_pointer_cast<Explicit>(layer->GetProvider()))
+                if (provider->IsAnimated())
+                    layer->SetDirty(true);
 
         // Update all the visible layers
         for (const auto& layer : stack->GetLayers())
-        {
-            if (layer->IsVisible()) {
+            if (layer->IsVisible()) 
                 somethingChanged |= layer->Update();
-            }
-        }
-
-        camera.Update();
 
         glClearColor(0.2f, 0.25f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);

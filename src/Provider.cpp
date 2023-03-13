@@ -1,6 +1,7 @@
 #include "Provider.hpp"
 
 #include "Simulation.hpp"
+#include "Base/Logging.h"
 
 #include "c3gaTools.hpp"
 
@@ -9,8 +10,41 @@
 // == Explicit Provider ==
 
 void Explicit::SetAnimated(const bool& animated) {
-    m_animated = animated;
+    auto& engine = SimulationEngine::Get();
+
+    if (!animated && m_simHandle.IsValid())
+    {
+        engine.RemoveSimulation(m_simHandle);
+        m_simHandle = SimulationHandle();
+        return;
+    }
+
+    if (animated && !m_simHandle.IsValid())
+    {
+        m_simHandle = engine.NewSimulation();
+    }
 }
+
+void Explicit::Compute(Layer& layer)
+{
+    if (!IsAnimated()) 
+    { 
+        return;
+    }
+
+    MvecArray& result = layer.GetObjects();
+    MvecArray simulated = m_simHandle.GetObjects();
+
+    if (simulated.empty()) 
+    {
+        m_simHandle.SetObjects(result);
+    }
+    else 
+    {
+        result = simulated;
+    }
+}
+
 
 // == Random Generator ==
 
@@ -56,7 +90,16 @@ void RandomGenerator::Compute(Layer& layer)
                 break;
             }
         }
+
+        if (IsAnimated())
+        {
+            m_simHandle.SetObjects({});
+        }
+
+        m_isDirty = false;
     }
+
+    Explicit::Compute(layer);
 }
 
 // == Subset ==

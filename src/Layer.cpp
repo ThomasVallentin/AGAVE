@@ -206,7 +206,6 @@ bool Layer::Update()
         return false;
     }
 
-
     for (auto& sourcePtr : m_sources) {
         auto source = sourcePtr.lock();
         if (source)
@@ -220,4 +219,3 @@ bool Layer::Update()
 
     return true;
 }
-

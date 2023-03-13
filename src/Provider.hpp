@@ -2,6 +2,7 @@
 #define PROVIDER_HPP
 
 #include "Layer.hpp"
+#include "Simulation.hpp"
 
 #include "C3GAUtils.hpp"
 
@@ -44,15 +45,15 @@ public:
 class Explicit : public Provider
 {
 public:
-    inline bool IsAnimated() const { return m_animated; }
+    inline bool IsAnimated() const { return m_simHandle.IsValid(); }
     void SetAnimated(const bool& animated);
 
-    inline void Compute(Layer& layer) override {};
+    void Compute(Layer& layer) override;
     inline ProviderType GetType() const override { return ProviderType_Explicit; };
     inline uint32_t GetSourceCount() const override { return 0; }
 
-private:
-    bool m_animated;
+protected:
+    SimulationHandle m_simHandle;
 };
 
 class RandomGenerator : public Explicit

@@ -661,12 +661,46 @@ bool DrawSubsetProvider(const LayerPtr& layer)
     int count = provider->GetCount();
 
     ImGui::AlignTextToFramePadding();
-    ImGui::Text("Count:");
+    ImGui::Text("Count :");
     ImGui::SameLine();
     ImGui::SetNextItemWidth(75);
     if (ImGui::DragInt((std::string("##SubsetCountDrag") + layer->GetName()).c_str(), &count, 0.05f, -1, 1000))
     {
         provider->SetCount(count);
+        layer->SetDirty(true);
+        return true;
+    }
+
+    return false;
+}
+ 
+
+// == Self combination ==
+
+bool DrawSelfCombinationProvider(const LayerPtr& layer)
+{
+    auto provider = std::dynamic_pointer_cast<SelfCombination>(layer->GetProvider());
+    int count = provider->GetCount();
+    int dimension = provider->GetDimension();
+
+    ImGui::AlignTextToFramePadding();
+    ImGui::Text("Count :");
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(75);
+    if (ImGui::DragInt((std::string("##SelfCombinationCountDrag") + layer->GetName()).c_str(), &count, 0.05f, -1, 1000))
+    {
+        provider->SetCount(count);
+        layer->SetDirty(true);
+        return true;
+    }
+
+    ImGui::AlignTextToFramePadding();
+    ImGui::Text("Dimension :");
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(75);
+    if (ImGui::DragInt((std::string("##SelfCombinationDimensionDrag") + layer->GetName()).c_str(), &dimension, 0.05f, 0, 4))
+    {
+        provider->SetDimension(dimension);
         layer->SetDirty(true);
         return true;
     }
@@ -758,24 +792,6 @@ bool LayerStackWidget::DrawLayerContent(const LayerPtr& layer,
                 break;
             }
 
-            case ProviderType_SelfCombination: {
-                ImGui::AlignTextToFramePadding();
-                ImGui::Text("Source :");
-                ImGui::SameLine();
-
-                if (sources.empty())
-                    sources.resize(1);
-
-                sourcesChanged |= DrawSourceComboBox(layers, layer, sources[0], 0);
-
-                ImGui::AlignTextToFramePadding();
-                ImGui::Text("Operator :");
-                ImGui::SameLine();
-                sourcesChanged |= DrawOperatorComboBox(layer, std::dynamic_pointer_cast<OperatorBasedProvider>(provider));
-
-                break;
-            }
-
             case ProviderType_Combination: {
                 ImGui::AlignTextToFramePadding();
                 ImGui::Text("Source 1 :");
@@ -798,6 +814,26 @@ bool LayerStackWidget::DrawLayerContent(const LayerPtr& layer,
 
                 break;
             }
+
+            case ProviderType_SelfCombination: {
+                ImGui::AlignTextToFramePadding();
+                ImGui::Text("Source :");
+                ImGui::SameLine();
+
+                if (sources.empty())
+                    sources.resize(1);
+
+                sourcesChanged |= DrawSourceComboBox(layers, layer, sources[0], 0);
+
+                ImGui::AlignTextToFramePadding();
+                ImGui::Text("Operator :");
+                ImGui::SameLine();
+                sourcesChanged |= DrawOperatorComboBox(layer, std::dynamic_pointer_cast<OperatorBasedProvider>(provider));
+                somethingChanged |= DrawSelfCombinationProvider(layer);
+
+                break;
+            }
+
         }
 
         if (sourcesChanged) {
