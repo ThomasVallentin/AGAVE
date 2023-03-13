@@ -157,16 +157,16 @@ std::vector<std::vector<uint32_t>> GetIntegerCombinations(const uint32_t& maxInd
 void SelfCombination::Compute(Layer& layer) 
 {
     auto sources = layer.GetSources();
+    const auto source = sources[0].lock();
+    const auto& sourceObjs = source->GetObjects(); 
+    uint32_t sourceObjCount = sourceObjs.size();
     auto op = GetOperator();
-    if (!m_count || !m_dimension || !op || sources.empty())
+
+    if (!m_count || !m_dimension || sourceObjCount < m_dimension || !op || sources.empty())
     {
         layer.Clear();
         return;
     }
-
-    const auto source = sources[0].lock();
-    const auto& sourceObjs = source->GetObjects(); 
-    uint32_t sourceObjCount = sourceObjs.size();
 
     MvecArray& result = layer.GetObjects();
     uint32_t outObjCount;

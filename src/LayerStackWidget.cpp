@@ -828,7 +828,7 @@ bool LayerStackWidget::DrawLayerContent(const LayerPtr& layer,
                 ImGui::AlignTextToFramePadding();
                 ImGui::Text("Operator :");
                 ImGui::SameLine();
-                sourcesChanged |= DrawOperatorComboBox(layer, std::dynamic_pointer_cast<OperatorBasedProvider>(provider));
+                somethingChanged |= DrawOperatorComboBox(layer, std::dynamic_pointer_cast<OperatorBasedProvider>(provider));
                 somethingChanged |= DrawSelfCombinationProvider(layer);
 
                 break;
@@ -847,7 +847,7 @@ bool LayerStackWidget::DrawLayerContent(const LayerPtr& layer,
         }
     }
 
-    somethingChanged || sourcesChanged;
+    somethingChanged |= sourcesChanged;
 
     return somethingChanged;
 }

@@ -39,12 +39,10 @@ public:
     inline void Clear() { m_objects.clear(); }
 
     LayerWeakPtrArray GetSources() const;
-    virtual void SetSources(const LayerWeakPtrArray& layers);
     virtual void AddSource(const LayerWeakPtr& layer);
     virtual void RemoveSource(const LayerWeakPtr& layer);
 
     LayerWeakPtrArray GetDestinations() const;
-    virtual void SetDestinations(const LayerWeakPtrArray& layers);
     virtual void AddDestination(const LayerWeakPtr& layer);
     virtual void RemoveDestination(const LayerWeakPtr& layer);
 

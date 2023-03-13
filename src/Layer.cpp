@@ -35,26 +35,6 @@ LayerWeakPtrArray Layer::GetSources() const
     return m_sources;
 }
 
-void Layer::SetSources(const LayerWeakPtrArray& layers)
-{
-    // Remove current layer from old source's destinations
-    for (auto& source : m_sources) {
-        if (auto sourcePtr = source.lock()) {
-            sourcePtr->RemoveDestination(std::shared_ptr<Layer>(this));
-        }
-    }
-
-    // Add current layer to new source's destinations
-    for (auto& layer : layers) {
-        if (auto layerPtr = layer.lock()) {
-            layerPtr->AddDestination(std::shared_ptr<Layer>(this));
-        }
-    }
-
-    m_sources = layers;
-    SetDirty(true);
-}
-
 void Layer::AddSource(const LayerWeakPtr& layer)
 {
     auto layerPtr = layer.lock();
@@ -104,26 +84,6 @@ LayerWeakPtrArray Layer::GetDestinations() const
     return m_destinations;
 }
 
-void Layer::SetDestinations(const LayerWeakPtrArray& layers)
-{
-
-    // Remove current layer from old source's destinations
-    for (auto& source : m_sources) {
-        if (auto sourcePtr = source.lock()) {
-            sourcePtr->RemoveDestination(std::shared_ptr<Layer>(this));
-        }
-    }
-
-    // Add current layer to new source's destinations
-    for (auto& layer : layers) {
-        if (auto layerPtr = layer.lock()) {
-            layerPtr->AddDestination(std::shared_ptr<Layer>(this));
-        }
-    }
-
-    m_sources = layers;
-}
-
 void Layer::AddDestination(const LayerWeakPtr& layer)
 {
     auto layerPtr = layer.lock();
@@ -138,11 +98,10 @@ void Layer::AddDestination(const LayerWeakPtr& layer)
         }
     );
 
-    if (it == m_sources.end())
+    if (it == m_destinations.end())
     {
         m_destinations.push_back(layer);
     }
-
 }
 
 void Layer::RemoveDestination(const LayerWeakPtr& layer)
@@ -156,7 +115,7 @@ void Layer::RemoveDestination(const LayerWeakPtr& layer)
     auto it = std::find_if(m_destinations.begin(), m_destinations.end(),
         [&layerPtr](const auto& other)
         {
-            return layerPtr == other.lock();
+            return layerPtr.get() == other.lock().get();
         }
     );  
     if (it != m_destinations.end())

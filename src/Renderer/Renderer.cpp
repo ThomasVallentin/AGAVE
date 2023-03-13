@@ -218,20 +218,20 @@ void Renderer::BuildBatches(const LayerStackPtr& layerStack)
     }
 
     m_pointCount = points.size();
-    LOG_INFO("point count %d", m_pointCount);
+    // LOG_INFO("point count %d", m_pointCount);
     auto vbo = m_points->GetVertexBuffers()[0];
     vbo->Bind();
     vbo->SetData(points.data(), m_pointCount * sizeof(glm::vec3));
 
     m_circles.instanceCount = circles.size();
-    LOG_INFO("circle count %d", m_circles.instanceCount);
+    // LOG_INFO("circle count %d", m_circles.instanceCount);
     vbo = m_circles.vertexArray->GetVertexBuffers()[1];
     vbo->Bind();
     vbo->SetData(circles.data(), m_circles.instanceCount * sizeof(glm::mat4));
     vbo->Unbind();
 
     m_spheres.instanceCount = spheres.size();
-    LOG_INFO("sphere count %d", m_spheres.instanceCount);
+    // LOG_INFO("sphere count %d", m_spheres.instanceCount);
     vbo = m_spheres.vertexArray->GetVertexBuffers()[1];
     vbo->Bind();
     vbo->SetData(spheres.data(), m_spheres.instanceCount * sizeof(glm::mat4));

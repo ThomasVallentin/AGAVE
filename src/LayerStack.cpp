@@ -1,5 +1,7 @@
 #include "LayerStack.hpp"
 
+#include "Base/Logging.h"
+
 LayerPtrArray LayerStack::GetLayers() const
 {
     return m_layers;
