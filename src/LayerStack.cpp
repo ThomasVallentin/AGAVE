@@ -131,14 +131,12 @@ void LayerStack::ConnectLayers(const LayerPtr& source, const LayerPtr& destinati
 {
     destination->AddSource(source);
     source->AddDestination(destination);
-    destination->SetDirty(true);
 }
 
 void LayerStack::DisconnectLayers(const LayerPtr& source, const LayerPtr& destination) const
 {
     destination->RemoveSource(source);
     source->RemoveDestination(destination);
-    destination->SetDirty(true);
 }
 
 std::string LayerStack::GetNextAvailableName(std::string basename) const

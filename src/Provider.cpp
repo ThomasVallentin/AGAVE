@@ -25,30 +25,45 @@ void Explicit::SetAnimated(const bool& animated) {
     }
 }
 
-void Explicit::Compute(Layer& layer)
+bool Explicit::Compute(Layer& layer)
 {
     if (!IsAnimated()) 
-    { 
-        return;
+    {
+        return false;
     }
 
-    MvecArray& result = layer.GetObjects();
+    MvecArray& objects = layer.GetObjects();
     MvecArray simulated = m_simHandle.GetObjects();
 
     if (simulated.empty()) 
     {
-        m_simHandle.SetObjects(result);
+        // Un-dualing the objects before sending them to the simulation 
+        // if the layer store them as dual. 
+        if (layer.IsDual())
+        {
+            MvecArray duals(objects.size());
+            for (size_t i=0 ; i < objects.size() ; ++i)
+                duals[i] = objects[i].dual();
+
+            m_simHandle.SetObjects(duals);
+        }
+        else 
+        {
+            m_simHandle.SetObjects(objects);
+        }
     }
     else 
     {
-        result = simulated;
+        objects = simulated;
     }
+
+    return true;
 }
 
 
 // == Random Generator ==
 
-void RandomGenerator::Compute(Layer& layer) 
+bool RandomGenerator::Compute(Layer& layer) 
 {
     if (m_isDirty)
     {
@@ -99,18 +114,18 @@ void RandomGenerator::Compute(Layer& layer)
         m_isDirty = false;
     }
 
-    Explicit::Compute(layer);
+    return Explicit::Compute(layer);
 }
 
 // == Subset ==
 
-void Subset::Compute(Layer& layer)
+bool Subset::Compute(Layer& layer)
 {
     auto sources = layer.GetSources();
     if (!m_count || sources.empty())
     {
         layer.Clear();
-        return;
+        return false;
     }
 
     const auto source = sources[0].lock();
@@ -120,6 +135,8 @@ void Subset::Compute(Layer& layer)
 
     auto& objects = layer.GetObjects();
     objects = MvecArray(sourceObjs.begin(), sourceObjs.begin() + count);
+
+    return true;
 }
 
 // == Operator Based Provider ==
@@ -154,7 +171,7 @@ std::vector<std::vector<uint32_t>> GetIntegerCombinations(const uint32_t& maxInd
     return result;
 }
 
-void SelfCombination::Compute(Layer& layer) 
+bool SelfCombination::Compute(Layer& layer) 
 {
     auto sources = layer.GetSources();
     auto op = GetOperator();
@@ -162,7 +179,7 @@ void SelfCombination::Compute(Layer& layer)
     if (!m_count || !m_dimension || !op || sources.empty())
     {
         layer.Clear();
-        return;
+        return false;
     }
 
     const auto source = sources[0].lock();
@@ -172,7 +189,7 @@ void SelfCombination::Compute(Layer& layer)
     if (sourceObjCount < m_dimension)
     {
         layer.Clear();
-        return;
+        return false;
     }
 
     MvecArray& result = layer.GetObjects();
@@ -214,11 +231,13 @@ void SelfCombination::Compute(Layer& layer)
     m_prevCount = m_count;
     m_prevDim = m_dimension;
     m_prevSourceCount = sources.size();
+
+    return true;
 }
 
 // == Combination ==
 
-void Combination::Compute(Layer& layer) 
+bool Combination::Compute(Layer& layer) 
 {
     auto sources = layer.GetSources();
 
@@ -226,7 +245,7 @@ void Combination::Compute(Layer& layer)
     if (sources.size() < 2 || !op)
     {
         layer.Clear();
-        return;
+        return false;
     }
     
     LayerPtr sourcePtr1 = sources[0].lock();
@@ -247,4 +266,6 @@ void Combination::Compute(Layer& layer)
             ++i;
         }
     }
+
+    return true;
 }

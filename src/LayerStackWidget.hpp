@@ -26,9 +26,8 @@ public:
 
 private:
     bool DrawLayer(const LayerPtr& layer, const int& index);
-    bool DrawLayerContent(const LayerPtr& layer, 
-                     const bool& isSelected, 
-                     const bool& isSource);
+    bool DrawLayerTreeNode(const LayerPtr& layer, const int& index, bool& opened);
+    bool DrawLayerContent(const LayerPtr& layer);
     
     bool IsSource(const LayerPtr &layer);
     void UpdateSources();

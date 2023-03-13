@@ -22,6 +22,14 @@ using ProviderPtr = std::shared_ptr<Provider>;
 using ProviderWeakPtr = std::weak_ptr<Provider>;
 
 
+enum DirtyBits
+{
+    DirtyBits_None = 0,
+    DirtyBits_Dual = 1 << 0,
+    DirtyBits_Provider = 1 << 2,
+};
+
+
 class Layer
 {
 public:
@@ -33,7 +41,7 @@ public:
 
     inline const MvecArray& GetObjects() const { return m_objects; }
     inline MvecArray& GetObjects() { return m_objects; }
-    inline void SetObjects(const MvecArray& objects) { m_objects = objects; SetDirty(true); }
+    inline void SetObjects(const MvecArray& objects) { m_objects = objects; SetDirty(DirtyBits_Provider); }
     inline c3ga::Mvec<double>& operator[](const uint32_t& idx) { return m_objects[idx]; }
     inline const c3ga::Mvec<double>& operator[](const uint32_t& idx) const { return m_objects[idx]; }
     inline void Clear() { m_objects.clear(); }
@@ -46,15 +54,19 @@ public:
     virtual void AddDestination(const LayerWeakPtr& layer);
     virtual void RemoveDestination(const LayerWeakPtr& layer);
 
-    void SetDirty(const bool& dirty);
-    inline bool IsDirty() const { return m_isDirty; }
+    void SetDirty(const DirtyBits& dirtyBits);
+    inline bool IsDirty() const { return m_dirtyBits != DirtyBits_None; }
+    DirtyBits GetDirtyBits() const { return m_dirtyBits; }
 
     inline ProviderPtr GetProvider() const { return m_provider; }
     void SetProvider(const ProviderPtr& provider);
 
     inline bool IsVisible() const { return m_visibility; }
     inline bool& GetVisiblity() { return m_visibility; }
-    inline void SetVisiblity(const bool& visibility) { m_visibility = visibility; }
+    inline void SetVisible(const bool& visibility) { m_visibility = visibility; }
+
+    inline bool IsDual() const { return m_isDual; }
+    void SetDual(const bool& dual);
 
     bool Update();
 
@@ -74,7 +86,8 @@ private:
 
     LayerWeakPtrArray m_sources;
     LayerWeakPtrArray m_destinations;
-    bool m_isDirty = true;
+    DirtyBits m_dirtyBits = DirtyBits_Provider;
+    bool m_isDual;
 };
 
 

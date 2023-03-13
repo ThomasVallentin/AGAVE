@@ -71,7 +71,7 @@ int main(int argc, char* argv[])
         for (const auto& layer : stack->GetLayers())
             if (auto provider = std::dynamic_pointer_cast<Explicit>(layer->GetProvider()))
                 if (provider->IsAnimated())
-                    layer->SetDirty(true);
+                    layer->SetDirty(DirtyBits_Provider);
 
         // Update all the visible layers
         for (const auto& layer : stack->GetLayers())

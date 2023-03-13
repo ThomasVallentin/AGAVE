@@ -36,7 +36,7 @@ enum ProviderType
 class Provider
 {
 public:
-    virtual void Compute(Layer& layer) = 0;
+    virtual bool Compute(Layer& layer) = 0;
     virtual ProviderType GetType() const = 0;
     virtual inline uint32_t GetSourceCount() const { return 0; }
 };
@@ -48,7 +48,7 @@ public:
     inline bool IsAnimated() const { return m_simHandle.IsValid(); }
     void SetAnimated(const bool& animated);
 
-    void Compute(Layer& layer) override;
+    bool Compute(Layer& layer) override;
     inline ProviderType GetType() const override { return ProviderType_Explicit; };
     inline uint32_t GetSourceCount() const override { return 0; }
 
@@ -79,7 +79,7 @@ public:
     inline float GetExtents() const { return m_extents; }
     inline void SetExtents(const float& extents) { m_extents = extents; m_isDirty = true; }
 
-    void Compute(Layer& layer) override;
+    bool Compute(Layer& layer) override;
     inline ProviderType GetType() const override { return ProviderType_RandomGenerator; };
     inline uint32_t GetSourceCount() const override { return 0; }
 
@@ -100,7 +100,7 @@ public:
     inline int GetCount() const { return m_count; }
     inline void SetCount(const int& count) { m_count = count; }
 
-    void Compute(Layer& layer) override;
+    bool Compute(Layer& layer) override;
     inline ProviderType GetType() const override { return ProviderType_Subset; }
     inline uint32_t GetSourceCount() const override { return 1; }
 
@@ -139,7 +139,7 @@ public:
     inline uint8_t GetDimension() const { return m_dimension; }
     inline void SetDimension(const uint8_t& dimension) { m_dimension = dimension; }
 
-    void Compute(Layer& layer) override;
+    bool Compute(Layer& layer) override;
     inline ProviderType GetType() const override { return ProviderType_SelfCombination; }
     inline uint32_t GetSourceCount() const override { return 1; }
 
@@ -158,7 +158,7 @@ public:
     Combination(const Operator& op=Operators::OuterProduct) : 
             OperatorBasedProvider(op) {}
 
-    void Compute(Layer& layer) override;
+    bool Compute(Layer& layer) override;
     inline ProviderType GetType() const override { return ProviderType_Combination; }
     inline uint32_t GetSourceCount() const override { return 2; }
 };

@@ -14,8 +14,9 @@
 Layer::Layer(const std::string& name, 
              const MvecArray& objects) :
         m_name(name), 
-        m_visibility(true), 
         m_objects(objects), 
+        m_isDual(false), 
+        m_visibility(true), 
         m_provider(new Explicit())
 {
 
@@ -24,6 +25,7 @@ Layer::Layer(const std::string& name,
 Layer::Layer(const std::string& name, 
              const ProviderPtr& provider) :
         m_name(name), 
+        m_isDual(false), 
         m_visibility(true), 
         m_provider(provider) 
 {
@@ -54,7 +56,7 @@ void Layer::AddSource(const LayerWeakPtr& layer)
         m_sources.push_back(layer);
     }
 
-    SetDirty(true);
+    SetDirty(DirtyBits_Provider);
 }
 
 void Layer::RemoveSource(const LayerWeakPtr& layer)
@@ -76,7 +78,7 @@ void Layer::RemoveSource(const LayerWeakPtr& layer)
         m_sources.erase(it);
     }
 
-    SetDirty(true);
+    SetDirty(DirtyBits_Provider);
 }
 
 LayerWeakPtrArray Layer::GetDestinations() const
@@ -124,10 +126,10 @@ void Layer::RemoveDestination(const LayerWeakPtr& layer)
     }
 }
 
-void Layer::SetDirty(const bool& dirty)
+void Layer::SetDirty(const DirtyBits& dirtyBits)
 {
-    bool propagate = dirty && !m_isDirty;
-    m_isDirty = dirty;
+    bool propagate = (dirtyBits != DirtyBits_None) && !IsDirty();
+    m_dirtyBits = (DirtyBits)(m_dirtyBits | dirtyBits);
     if (!propagate) 
     {
         return;
@@ -137,7 +139,7 @@ void Layer::SetDirty(const bool& dirty)
     {
         if (auto ptr = dest.lock())
         {
-            ptr->SetDirty(true);
+            ptr->SetDirty(DirtyBits_Provider);
         }
     }
 }
@@ -147,13 +149,22 @@ void Layer::SetProvider(const ProviderPtr& provider)
     if (m_provider != provider)
     {
         m_provider = provider;
-        SetDirty(true);
+        SetDirty(DirtyBits_Provider);
+    }
+}
+
+void Layer::SetDual(const bool& dual)
+{
+    if (m_isDual != dual)
+    {
+        m_isDual = dual;
+        SetDirty(DirtyBits_Dual);
     }
 }
 
 bool Layer::Update() 
 {
-    if (!m_isDirty)
+    if (m_dirtyBits == DirtyBits_None)
     {
         return false;
     }
@@ -161,7 +172,7 @@ bool Layer::Update()
     if (!m_provider)
     {
         m_objects.clear();
-        m_isDirty = false;
+        m_dirtyBits = DirtyBits_None;
         return false;
     }
 
@@ -173,8 +184,12 @@ bool Layer::Update()
         }
     }
 
-    m_provider->Compute(*this);
-    SetDirty(false);
+    bool objectsChanged = m_provider->Compute(*this);
+    if ((objectsChanged && m_isDual) || m_dirtyBits & DirtyBits_Dual)
+        for (auto& obj : m_objects)
+            obj = obj.dual();
+
+    m_dirtyBits = DirtyBits_None;
 
     return true;
 }

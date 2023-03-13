@@ -110,6 +110,52 @@ bool LayerStackWidget::Draw()
 
 bool LayerStackWidget::DrawLayer(const LayerPtr& layer, const int& index)
 {
+    bool opened = false;
+    bool somethingChanged = DrawLayerTreeNode(layer, index, opened);
+
+    // Draw the extended data if the item is expanded
+    if (opened) {
+        somethingChanged |= DrawLayerContent(layer);
+        ImGui::Spacing();
+        ImGui::TreePop();
+    }
+
+    return somethingChanged;
+}
+
+
+// == Tree node ==
+
+bool DrawTreeNodeCheckBox(const char* label, const std::string& suffix, bool *value, const float& rightOffset)
+{
+
+    // Visibility Checkbox
+    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
+    ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, ImVec4(0.0f, 0.0f, 0.0f, 1.0f));
+    ImGui::PushStyleColor(ImGuiCol_FrameBgActive, ImVec4(0.0f, 0.0f, 0.0f, 1.0f));
+    int popColors = 2;
+
+    if (!(*value))
+    {
+        ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
+        popColors += 1;
+    }
+
+    ImGui::SameLine(ImGui::GetWindowWidth() - rightOffset);
+    ImGui::Text(label);
+    ImGui::SameLine();
+    ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 3);
+    bool toggled = ImGui::Checkbox((std::string("##TreeNodeCBox") + suffix).c_str(), 
+                                   value,
+                                   ImGuiButtonFlags_PressedOnClick);
+    ImGui::PopStyleColor(popColors);
+    ImGui::PopStyleVar();
+
+    return toggled;
+}
+
+bool LayerStackWidget::DrawLayerTreeNode(const LayerPtr& layer, const int& index, bool& opened)
+{
     bool somethingChanged = false;
 
     const std::string layerName = layer->GetName();
@@ -135,8 +181,9 @@ bool LayerStackWidget::DrawLayer(const LayerPtr& layer, const int& index)
         popColors += 2;
     }
 
+    // Create the tree node
     ImGui::Separator();
-    bool opened = ImGui::TreeNodeEx((layerName + "##LayerStackNode").c_str(), nodeFlags);
+    opened = ImGui::TreeNodeEx((layerName + "##LayerStackNode").c_str(), nodeFlags);
     ImGui::PopStyleColor(popColors);
 
     // Processing clicked before creating the visibility checkbox it messes the clicked up 
@@ -154,36 +201,27 @@ bool LayerStackWidget::DrawLayer(const LayerPtr& layer, const int& index)
         ImGui::EndPopup();
     }
 
-    // Visibility Checkbox
-    bool isVisible = layer->GetVisiblity();
-    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
-    ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, ImVec4(0.0f, 0.0f, 0.0f, 1.0f));
-    ImGui::PushStyleColor(ImGuiCol_FrameBgActive, ImVec4(0.0f, 0.0f, 0.0f, 1.0f));
-    popColors = 2;
-
-    if (!isVisible)
-    {
-        ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
-        popColors += 1;
-    }
-
-    ImGui::SameLine(ImGui::GetWindowWidth() - 72.0f);
-    ImGui::Text("Visible :");
-    ImGui::SameLine();
-    ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 3);
     bool toggled = false;
-    if (ImGui::Checkbox((std::string("##VisibilityCBox") + layerName).c_str(), 
-                        &isVisible,
-                        ImGuiButtonFlags_PressedOnClick))
+
+    // Dual checkbox
+    bool dual = layer->IsDual();
+    if (DrawTreeNodeCheckBox("Dual :", layerName + "Dual", &dual, 140.0f))
     {
-        layer->SetVisiblity(isVisible);
+        layer->SetDual(dual);
         somethingChanged = true;
         toggled = true;
     }
-    ImGui::PopStyleColor(popColors);
-    ImGui::PopStyleVar();
 
-    // Update selection if visibility was not toggled nor item was expanded
+    // Visibility checkbox
+    bool visible = layer->IsVisible();
+    if (DrawTreeNodeCheckBox("Visible :", layerName + "Visible", &visible, 72.0f))
+    {
+        layer->SetVisible(visible);
+        somethingChanged = true;
+        toggled = true;
+    }
+
+    // Update selection if nothing was toggled nor any item was expanded
     if (!toggled && clicked) 
     {
         // Shift modifier -> Range selection
@@ -223,13 +261,6 @@ bool LayerStackWidget::DrawLayer(const LayerPtr& layer, const int& index)
             SelectLayer(layer);
             m_lastIndex = index;
         }
-    }
-
-    // Draw the extended data if the item is expanded
-    if (opened) {
-        somethingChanged |= DrawLayerContent(layer, isSelected, isSource);
-        ImGui::Spacing();
-        ImGui::TreePop();
     }
 
     return somethingChanged;
@@ -355,7 +386,7 @@ bool DrawOperatorComboBox(const LayerPtr& layer, const std::shared_ptr<OperatorB
 
             if (ImGui::Selectable(opNames[i], selected, flags)) {
                 provider->SetOperator(operators[i]);
-                layer->SetDirty(true);
+                layer->SetDirty(DirtyBits_Provider);
                 somethingChanged = true;
             }
 
@@ -578,7 +609,7 @@ bool DrawExplicitProvider(const LayerPtr& layer)
     }
 
     if (somethingChanged) {
-        layer->SetDirty(true);
+        layer->SetDirty(DirtyBits_Provider);
     }
 
     return somethingChanged;
@@ -615,7 +646,7 @@ bool DrawRandomGenerator(const LayerPtr& layer)
             bool selected = objTypeName == typeNames[i];
             if (ImGui::Selectable(typeNames[i], selected) && !selected) {
                 provider->SetObjectType(types[i]);
-                layer->SetDirty(true);
+                layer->SetDirty(DirtyBits_Provider);
                 somethingChanged = true;
             }
 
@@ -633,7 +664,7 @@ bool DrawRandomGenerator(const LayerPtr& layer)
     if (ImGui::DragInt((std::string("##RandomGeneratorCountDrag") + suffix).c_str(), &count, 0.05f, 0, 10000))
     {
         provider->SetCount(count);
-        layer->SetDirty(true);
+        layer->SetDirty(DirtyBits_Provider);
         somethingChanged = true;
     }
 
@@ -645,7 +676,7 @@ bool DrawRandomGenerator(const LayerPtr& layer)
     if (ImGui::DragFloat((std::string("##RandomGeneratorExtentsDrag") + suffix).c_str(), &extents, 0.05f))
     {
         provider->SetExtents(extents);
-        layer->SetDirty(true);
+        layer->SetDirty(DirtyBits_Provider);
         somethingChanged = true;
     }
 
@@ -667,7 +698,7 @@ bool DrawSubsetProvider(const LayerPtr& layer)
     if (ImGui::DragInt((std::string("##SubsetCountDrag") + layer->GetName()).c_str(), &count, 0.05f, -1, 1000))
     {
         provider->SetCount(count);
-        layer->SetDirty(true);
+        layer->SetDirty(DirtyBits_Provider);
         return true;
     }
 
@@ -690,7 +721,7 @@ bool DrawSelfCombinationProvider(const LayerPtr& layer)
     if (ImGui::DragInt((std::string("##SelfCombinationCountDrag") + layer->GetName()).c_str(), &count, 0.05f, -1, 1000))
     {
         provider->SetCount(count);
-        layer->SetDirty(true);
+        layer->SetDirty(DirtyBits_Provider);
         return true;
     }
 
@@ -701,7 +732,7 @@ bool DrawSelfCombinationProvider(const LayerPtr& layer)
     if (ImGui::DragInt((std::string("##SelfCombinationDimensionDrag") + layer->GetName()).c_str(), &dimension, 0.05f, 0, 4))
     {
         provider->SetDimension(dimension);
-        layer->SetDirty(true);
+        layer->SetDirty(DirtyBits_Provider);
         return true;
     }
 
@@ -743,9 +774,7 @@ bool DrawSourceComboBox(const LayerPtrArray& layers, const LayerPtr& currentLaye
 
 // == Layer content ==
 
-bool LayerStackWidget::DrawLayerContent(const LayerPtr& layer, 
-                                    const bool& isSelected, 
-                                    const bool& isSource)
+bool LayerStackWidget::DrawLayerContent(const LayerPtr& layer)
 {
     const auto& layers = m_layerStack->GetLayers();
     auto sources = layer->GetSources();
