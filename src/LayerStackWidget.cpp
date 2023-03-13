@@ -469,7 +469,7 @@ bool DrawExplicitProvider(const LayerPtr& layer)
             {
                 bool selected = objTypeName == typeNames[i];
                 if (ImGui::Selectable(typeNames[i], selected) && !selected) {
-                    obj = ConvertMvecToType(obj, objType, types[i]);
+                    obj = convert(obj, objType, types[i]);
                     objType = types[i];
                     somethingChanged = true;
                 }

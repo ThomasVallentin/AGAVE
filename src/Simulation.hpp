@@ -11,15 +11,11 @@
 
 struct SimObject
 {
-    c3ga::Mvec<double> position;
+    c3ga::Mvec<double> object;
     c3ga::Mvec<double> velocity;
     c3ga::Mvec<double> accumulatedForces;
 
-    void update(const double& deltaTime) {
-        // velocity += accumulatedForces * deltaTime;
-        position += (velocity + accumulatedForces) * deltaTime;
-        accumulatedForces = c3ga::Mvec<float>(0);
-    }
+    void Update(const double& deltaTime);
 };
 
 using SimObjectArray = std::vector<SimObject>;

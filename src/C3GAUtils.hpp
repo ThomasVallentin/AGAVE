@@ -61,6 +61,34 @@ enum class MvecType
 };
 
 
+template <typename T>
+Mvec<T> vector(const T& x, const T& y, const T& z)
+{		
+    Mvec<T> result;
+    
+    result[c3ga::E1] = x;
+    result[c3ga::E2] = y;
+    result[c3ga::E3] = z;
+    result[c3ga::Ei] = 0.0;
+    result[c3ga::E0] = 0.0;
+
+    return result;
+}
+
+template <typename T>
+Mvec<T> randomVector()
+{		
+    std::uniform_real_distribution<T> distrib(-1.0, 1.0);
+    return vector(distrib(generator), distrib(generator), distrib(generator));
+}
+
+template <typename T>
+Mvec<T> translator(const Mvec<T>& translation)
+{		
+    return 1.0 - 0.5 * translation * ei<T>();
+}
+
+
 // This function is derived from c3ga::whoAmI() from the Garamon library.
 // It simply returns enums instead of string to make it more convenient to work with.
 template <typename T>
@@ -251,7 +279,6 @@ MvecType getTypeOf(Mvec<T> mv)
     return MvecType::Unknown;
 }
 
-
 inline std::string typeToName(const MvecType& type)
 {
     switch (type)
@@ -327,11 +354,10 @@ inline std::string typeToName(const MvecType& type)
     }
 }
 
-
 // Convert an mvector from a type to another one
 // Currently supports point, sphere and dualSphere conversion
 template <typename T>
-Mvec<T> ConvertMvecToType(const Mvec<T>& mv, const MvecType& fromType, const MvecType& toType)
+Mvec<T> convert(const Mvec<T>& mv, const MvecType& fromType, const MvecType& toType)
 {
     Mvec<T> result;
 
@@ -403,9 +429,9 @@ Mvec<T> ConvertMvecToType(const Mvec<T>& mv, const MvecType& fromType, const Mve
 
 // Convenience overloading
 template <typename T>
-Mvec<T> ConvertMvecToType(const Mvec<T>& mv, const MvecType& toType)
+Mvec<T> convert(const Mvec<T>& mv, const MvecType& toType)
 {
-    return ConvertMvecToType(mv, toType, getTypeOf(mv));
+    return convert(mv, toType, getTypeOf(mv));
 }
 
 

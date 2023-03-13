@@ -3,6 +3,7 @@
 #include "Base/Logging.h"
 
 #include "c3gaTools.hpp"
+#include "C3GAUtils.hpp"
 
 #include <iostream>
 #include <random>
@@ -62,44 +63,44 @@ void SimulationEngine::Update(const double &deltaTime)
                 force(obj);
             }
 
-            obj.update(deltaTime);
-            ComputeIntersections(obj);
-            obj.position = c3ga::point(obj.position[c3ga::E1], 
-                                       obj.position[c3ga::E2], 
-                                       obj.position[c3ga::E3]);
+            obj.Update(deltaTime);
+            // ComputeIntersections(obj);
+            // obj.position = c3ga::point(obj.position[c3ga::E1], 
+            //                            obj.position[c3ga::E2], 
+            //                            obj.position[c3ga::E3]);
         }
     }
 }
 
 void SimulationEngine::ComputeIntersections(SimObject &object)
 {
-    if (object.position[c3ga::E1] < -1.1f) {
-        object.position[c3ga::E1] = -1.1f;
+    if (object.object[c3ga::E1] < -1.1f) {
+        object.object[c3ga::E1] = -1.1f;
         object.velocity[c3ga::E1] *= -1.0f;
     }
     else 
-    if (object.position[c3ga::E1] > 1.1f) {
-        object.position[c3ga::E1] = 1.1f;
+    if (object.object[c3ga::E1] > 1.1f) {
+        object.object[c3ga::E1] = 1.1f;
         object.velocity[c3ga::E1] *= -1.0f;
     }
 
-    if (object.position[c3ga::E2] < -1.1f) {
-        object.position[c3ga::E2] = -1.1f;
+    if (object.object[c3ga::E2] < -1.1f) {
+        object.object[c3ga::E2] = -1.1f;
         object.velocity[c3ga::E2] *= -1.0f;
     }
     else 
-    if (object.position[c3ga::E2] > 1.1f) {
-        object.position[c3ga::E2] = 1.1f;
+    if (object.object[c3ga::E2] > 1.1f) {
+        object.object[c3ga::E2] = 1.1f;
         object.velocity[c3ga::E2] *= -1.0f;
     }
 
-    if (object.position[c3ga::E3] < -1.1f) {
-        object.position[c3ga::E3] = -1.1f;
+    if (object.object[c3ga::E3] < -1.1f) {
+        object.object[c3ga::E3] = -1.1f;
         object.velocity[c3ga::E3] *= -1.0f;
     }
     else 
-    if (object.position[c3ga::E3] > 1.1f) {
-        object.position[c3ga::E3] = 1.1f;
+    if (object.object[c3ga::E3] > 1.1f) {
+        object.object[c3ga::E3] = 1.1f;
         object.velocity[c3ga::E3] *= -1.0f;
     }
 }
@@ -122,7 +123,7 @@ MvecArray SimulationHandle::GetObjects() const
 
     size_t i = 0;
     for (const auto& simObj : simObjects) {
-        result[i] = simObj.position;
+        result[i] = simObj.object;
         ++i;
     }
 
@@ -138,8 +139,18 @@ void SimulationHandle::SetObjects(const MvecArray& objects)
     size_t i = 0;
     for (auto& simObj : simObjects)
     {
-        simObj.position = objects[i];
-        simObj.velocity = c3ga::randomPoint<double>();
+        simObj.object = objects[i];
+        simObj.velocity = c3ga::randomVector<double>();
         ++i;
     }
+}
+
+
+void SimObject::Update(const double& deltaTime)
+{
+    auto translator = c3ga::translator(velocity * deltaTime);
+    object = translator * object * translator.inv();
+    // Rounding to make sure precision issues don't mess up the rest of the program
+    object.roundZero(1e-6);  
+    accumulatedForces = c3ga::Mvec<double>(0);
 }
