@@ -54,7 +54,10 @@ int main(int argc, char* argv[])
     objects = {c3ga::dualSphere<double>(0, 1, 0, 1).dual()};
     auto lyr2 = stack->NewLayer("Layer2", objects);
     auto lyr3 = stack->NewCombination("Layer3", lyr1, lyr2, Operators::OuterProduct);
-
+    lyr3->SetDual(true);
+    lyr3->SetSourceDual(0, true);
+    lyr3->SetSourceDual(1, true);
+    
     LayerStackWidget layerStackWid(stack);
 
     double prevTime = window.GetTime();

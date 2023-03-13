@@ -54,6 +54,7 @@ void Layer::AddSource(const LayerWeakPtr& layer)
     if (it == m_sources.end())
     {
         m_sources.push_back(layer);
+        m_dualSources.push_back(false);
     }
 
     SetDirty(DirtyBits_Provider);
@@ -76,9 +77,30 @@ void Layer::RemoveSource(const LayerWeakPtr& layer)
     if (it != m_sources.end())
     {
         m_sources.erase(it);
+        m_dualSources.erase(m_dualSources.begin() + (it - m_sources.begin()));
     }
 
     SetDirty(DirtyBits_Provider);
+}
+
+bool Layer::SourceIsDual(const uint32_t& index) const
+{
+    if (index < m_dualSources.size())
+        return m_dualSources[index];
+
+    return false;
+}
+
+void Layer::SetSourceDual(const uint32_t& index, const bool& dual)
+{
+    if (index < m_dualSources.size())
+    {
+        if (m_dualSources[index] != dual)
+        {
+            m_dualSources[index] = dual;
+            SetDirty(DirtyBits_Provider);
+        }
+    }
 }
 
 LayerWeakPtrArray Layer::GetDestinations() const

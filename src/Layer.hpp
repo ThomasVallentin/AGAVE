@@ -49,6 +49,8 @@ public:
     LayerWeakPtrArray GetSources() const;
     virtual void AddSource(const LayerWeakPtr& layer);
     virtual void RemoveSource(const LayerWeakPtr& layer);
+    bool SourceIsDual(const uint32_t& index) const;
+    void SetSourceDual(const uint32_t& index, const bool& dual);
 
     LayerWeakPtrArray GetDestinations() const;
     virtual void AddDestination(const LayerWeakPtr& layer);
@@ -68,6 +70,7 @@ public:
     inline bool IsDual() const { return m_isDual; }
     void SetDual(const bool& dual);
 
+
     bool Update();
 
     inline MvecArray::iterator begin()             { return m_objects.begin(); }
@@ -85,6 +88,7 @@ private:
     ProviderPtr m_provider;
 
     LayerWeakPtrArray m_sources;
+    std::vector<bool> m_dualSources;
     LayerWeakPtrArray m_destinations;
     DirtyBits m_dirtyBits = DirtyBits_Provider;
     bool m_isDual;

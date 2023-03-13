@@ -130,11 +130,18 @@ bool Subset::Compute(Layer& layer)
 
     const auto source = sources[0].lock();
     const auto& sourceObjs = source->GetObjects();
+    const bool sourceIsDual = layer.SourceIsDual(0);
 
     uint32_t count = m_count < 0 ? sourceObjs.size() : std::min((size_t)m_count, sourceObjs.size());
 
     auto& objects = layer.GetObjects();
-    objects = MvecArray(sourceObjs.begin(), sourceObjs.begin() + count);
+    objects.resize(count);
+    if (sourceIsDual)
+        for (size_t i=0 ; i < count ; ++i)
+            objects[i] = sourceObjs[i].dual();
+    else
+        for (size_t i=0 ; i < count ; ++i)
+            objects[i] = sourceObjs[i];
 
     return true;
 }
@@ -184,7 +191,8 @@ bool SelfCombination::Compute(Layer& layer)
 
     const auto source = sources[0].lock();
     const auto& sourceObjs = source->GetObjects(); 
-    uint32_t sourceObjCount = sourceObjs.size();
+    const uint32_t sourceObjCount = sourceObjs.size();
+    const bool sourceIsDual = layer.SourceIsDual(0);
 
     if (sourceObjCount < m_dimension)
     {
@@ -219,12 +227,26 @@ bool SelfCombination::Compute(Layer& layer)
     // Apply operator for each count for each "dimension"
     result.resize(outObjCount);
     uint idx = 0;
-    for (auto& obj : result)
+    if (sourceIsDual)
     {
-        obj = sourceObjs[m_indices[idx]];
-        for (uint i=0 ; i < m_dimension - 1 ; ++i) {
-            ++idx;
-            obj = op(obj, sourceObjs[m_indices[idx]]);
+        for (auto& obj : result)
+        {
+            obj = sourceObjs[m_indices[idx]].dual();
+            for (uint i=0 ; i < m_dimension - 1 ; ++i) {
+                ++idx;
+                obj = op(obj, sourceObjs[m_indices[idx]].dual());
+            }
+        }
+    }
+    else
+    {
+        for (auto& obj : result)
+        {
+            obj = sourceObjs[m_indices[idx]];
+            for (uint i=0 ; i < m_dimension - 1 ; ++i) {
+                ++idx;
+                obj = op(obj, sourceObjs[m_indices[idx]]);
+            }
         }
     }
 
@@ -254,6 +276,9 @@ bool Combination::Compute(Layer& layer)
     const auto& sourceObjs1 = sourcePtr1->GetObjects(); 
     const auto& sourceObjs2 = sourcePtr2->GetObjects(); 
 
+    const bool source1IsDual = layer.SourceIsDual(0);
+    const bool source2IsDual = layer.SourceIsDual(1);
+
     auto& result = layer.GetObjects();
     result.resize(sourceObjs1.size() * sourceObjs2.size());
 
@@ -262,7 +287,8 @@ bool Combination::Compute(Layer& layer)
     {
         for (const auto& s2 : sourceObjs2)
         {
-            result[i] = op(s1.dual(), s2.dual()).dual();
+            result[i] = op(source1IsDual ? s1.dual() : s1, 
+                           source2IsDual ? s2.dual() : s2);
             ++i;
         }
     }

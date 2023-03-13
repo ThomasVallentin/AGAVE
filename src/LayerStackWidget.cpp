@@ -128,7 +128,6 @@ bool LayerStackWidget::DrawLayer(const LayerPtr& layer, const int& index)
 
 bool DrawTreeNodeCheckBox(const char* label, const std::string& suffix, bool *value, const float& rightOffset)
 {
-
     // Visibility Checkbox
     ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
     ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, ImVec4(0.0f, 0.0f, 0.0f, 1.0f));
@@ -742,13 +741,15 @@ bool DrawSelfCombinationProvider(const LayerPtr& layer)
 
 // == Sources ==
 
-bool DrawSourceComboBox(const LayerPtrArray& layers, const LayerPtr& currentLayer, LayerWeakPtr& source, int index)
+bool DrawSource(const LayerPtrArray& layers, const LayerPtr& currentLayer, LayerWeakPtr& source, int index)
 {
     LayerPtr src = source.lock();
     const char* currentName = src ? src->GetName().c_str() : ""; 
+    const char* suffix = (currentLayer->GetName() + std::to_string(index)).c_str();
 
     bool somethingChanged = false;
-    if (ImGui::BeginCombo((std::string("##SourceCombo") + currentLayer->GetName() + std::to_string(index)).c_str(), currentName))
+    ImGui::SetNextItemWidth(150.0f);
+    if (ImGui::BeginCombo((std::string("##SourceCombo") + suffix).c_str(), currentName))
     {
         for (size_t i = 0; i < layers.size(); i++)
         {
@@ -767,6 +768,25 @@ bool DrawSourceComboBox(const LayerPtrArray& layers, const LayerPtr& currentLaye
 
         ImGui::EndCombo();
     }
+
+    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
+    ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, ImVec4(0.0f, 0.0f, 0.0f, 1.0f));
+    ImGui::PushStyleColor(ImGuiCol_FrameBgActive, ImVec4(0.0f, 0.0f, 0.0f, 1.0f));
+    int popColors = 2;
+
+    ImGui::SameLine();
+    ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 5.0f);
+    ImGui::AlignTextToFramePadding();
+    ImGui::Text("Dual :");
+    ImGui::SameLine();
+    ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 3.0f);
+    bool dual = currentLayer->SourceIsDual(index);
+    if (ImGui::Checkbox((std::string("##SourceDualCBox") + suffix).c_str(), &dual))
+    {
+        currentLayer->SetSourceDual(index, dual);
+    }
+    ImGui::PopStyleColor(popColors);
+    ImGui::PopStyleVar();
 
     return somethingChanged;
 }
@@ -814,7 +834,7 @@ bool LayerStackWidget::DrawLayerContent(const LayerPtr& layer)
                 if (sources.empty())
                     sources.resize(1);
 
-                sourcesChanged |= DrawSourceComboBox(layers, layer, sources[0], 0);
+                sourcesChanged |= DrawSource(layers, layer, sources[0], 0);
 
                 sourcesChanged |= DrawSubsetProvider(layer);
 
@@ -829,12 +849,12 @@ bool LayerStackWidget::DrawLayerContent(const LayerPtr& layer)
                 if (sources.size() < 2)
                     sources.resize(2);
 
-                sourcesChanged |= DrawSourceComboBox(layers, layer, sources[0], 0);
+                sourcesChanged |= DrawSource(layers, layer, sources[0], 0);
 
                 ImGui::AlignTextToFramePadding();
                 ImGui::Text("Source 2 :");
                 ImGui::SameLine();
-                sourcesChanged |= DrawSourceComboBox(layers, layer, sources[1], 1);
+                sourcesChanged |= DrawSource(layers, layer, sources[1], 1);
 
                 ImGui::AlignTextToFramePadding();
                 ImGui::Text("Operator :");
@@ -852,7 +872,7 @@ bool LayerStackWidget::DrawLayerContent(const LayerPtr& layer)
                 if (sources.empty())
                     sources.resize(1);
 
-                sourcesChanged |= DrawSourceComboBox(layers, layer, sources[0], 0);
+                sourcesChanged |= DrawSource(layers, layer, sources[0], 0);
 
                 ImGui::AlignTextToFramePadding();
                 ImGui::Text("Operator :");
