@@ -1,5 +1,7 @@
 #include "Simulation.hpp"
-#include "LayerStackWidget.hpp"
+
+#include "UI/LayerStackWidget.hpp"
+#include "UI/Icons.hpp"
 
 #include "Renderer/Shader.h"
 #include "Renderer/VertexArray.h"
@@ -24,6 +26,7 @@ int main(int argc, char* argv[])
     auto& resolver = Resolver::Init(fs::weakly_canonical(argv[0])
                                     .parent_path()
                                     .parent_path());
+
     auto window = Window({1280, 720, "Particle System"});
     
     Camera camera(50.0f, 1280.0f / 720.0f, 0.1f, 10000.0f);
@@ -57,7 +60,7 @@ int main(int argc, char* argv[])
     lyr3->SetDual(true);
     lyr3->SetSourceDual(0, true);
     lyr3->SetSourceDual(1, true);
-    
+
     LayerStackWidget layerStackWid(stack);
 
     double prevTime = window.GetTime();

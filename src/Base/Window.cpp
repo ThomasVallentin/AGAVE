@@ -3,6 +3,7 @@
 #include "Logging.h"
 #include "Event.h"
 #include "Resolver.h"
+#include "UI/Icons.hpp"
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
@@ -204,6 +205,7 @@ Window::Window(const WindowInternalData& settings) :
     Resolver& resolver = Resolver::Get();
     fs::path fontPath = resolver.Resolve("resources/fonts/Roboto-Regular.ttf");
     io.FontDefault = io.Fonts->AddFontFromFileTTF(fontPath.c_str(), 15);
+    InitIconicFont();
 
     // UI Colors styling
     ImVec4* colors = ImGui::GetStyle().Colors;

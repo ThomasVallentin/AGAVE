@@ -3,12 +3,14 @@
 
 #include "LayerStack.hpp"
 
+#include "Renderer/Texture.h"
+
 
 class LayerStackWidget
 {
 public:
-    LayerStackWidget() = default;
-    explicit LayerStackWidget(const LayerStackPtr& layerStack) : m_layerStack(layerStack) {}
+    LayerStackWidget();
+    explicit LayerStackWidget(const LayerStackPtr& layerStack);
     ~LayerStackWidget() = default;
 
     void SetLayerStack(const LayerStackPtr& layerStack);
@@ -37,6 +39,15 @@ private:
     LayerPtrArray m_sources;
 
     int m_lastIndex;
+
+    TexturePtr m_dualIcon;
+    static const char* s_dualIconName;
+    TexturePtr m_notDualIcon;
+    static const char* s_notDualIconName;
+    TexturePtr m_visibleIcon;
+    static const char* s_visibleIconName;
+    TexturePtr m_notVisibleIcon;
+    static const char* s_notVisibleIconName;
 };
 
 #endif

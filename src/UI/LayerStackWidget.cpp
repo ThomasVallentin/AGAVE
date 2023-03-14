@@ -1,11 +1,39 @@
 #include "LayerStackWidget.hpp"
 
+#include "Resources.hpp"
+#include "Buttons.hpp"
+#include "Icons.hpp"
+
 #include "Base/Inputs.h"
 #include "Base/Logging.h"
 
 #include <imgui.h>
 #include <imgui_internal.h>
 
+
+const char* LayerStackWidget::s_dualIconName = "resources/icons/dualIcon.png";
+const char* LayerStackWidget::s_notDualIconName = "resources/icons/notDualIcon.png";
+const char* LayerStackWidget::s_visibleIconName = "resources/icons/visibleIcon.png";
+const char* LayerStackWidget::s_notVisibleIconName = "resources/icons/notVisibleIcon.png";
+
+
+LayerStackWidget::LayerStackWidget()
+{
+    m_dualIcon = Resources::GetTexture(s_dualIconName);
+    m_notDualIcon = Resources::GetTexture(s_notDualIconName);
+    m_visibleIcon = Resources::GetTexture(s_visibleIconName);
+    m_notVisibleIcon = Resources::GetTexture(s_notVisibleIconName);
+}
+
+LayerStackWidget::LayerStackWidget(const LayerStackPtr& layerStack) :
+        m_layerStack(layerStack)
+{
+    m_dualIcon = Resources::GetTexture(s_dualIconName);
+    m_notDualIcon = Resources::GetTexture(s_notDualIconName);
+    m_visibleIcon = Resources::GetTexture(s_visibleIconName);
+    m_notVisibleIcon = Resources::GetTexture(s_notVisibleIconName);
+    LOG_INFO("%d, %d, %d, %d", m_dualIcon->GetId(), m_notDualIcon->GetId(), m_visibleIcon->GetId(), m_notVisibleIcon->GetId());
+}
 
 void LayerStackWidget::SetLayerStack(const LayerStackPtr& layerStack)
 {
@@ -14,37 +42,6 @@ void LayerStackWidget::SetLayerStack(const LayerStackPtr& layerStack)
         m_layerStack = layerStack;
         ClearSelection();
     }
-}
-
-void LayerStackWidget::DeleteSelectedLayers()
-{
-    // Make sure we can delete the layers without causing too much trouble
-    for (const auto& layer : m_selection)
-    {
-        for (const auto& dest : layer->GetDestinations())
-        {
-            auto destination = dest.lock();
-            if (destination && !IsSelected(destination))
-            {
-                LOG_ERROR("Cannot remove the selected layers as other layers depend on them");
-                return;    
-            }            
-        }
-    }
-
-    // Delete the layers
-    for (const auto& layer : m_selection)
-    {
-        m_layerStack->RemoveLayer(layer);
-    }
-
-    ClearSelection();
-}
-
-void LayerStackWidget::Clear()
-{
-    m_layerStack->Clear();
-    ClearSelection();
 }
 
 bool LayerStackWidget::Draw() 
@@ -126,33 +123,6 @@ bool LayerStackWidget::DrawLayer(const LayerPtr& layer, const int& index)
 
 // == Tree node ==
 
-bool DrawTreeNodeCheckBox(const char* label, const std::string& suffix, bool *value, const float& rightOffset)
-{
-    // Visibility Checkbox
-    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
-    ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, ImVec4(0.0f, 0.0f, 0.0f, 1.0f));
-    ImGui::PushStyleColor(ImGuiCol_FrameBgActive, ImVec4(0.0f, 0.0f, 0.0f, 1.0f));
-    int popColors = 2;
-
-    if (!(*value))
-    {
-        ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
-        popColors += 1;
-    }
-
-    ImGui::SameLine(ImGui::GetWindowWidth() - rightOffset);
-    ImGui::Text(label);
-    ImGui::SameLine();
-    ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 3);
-    bool toggled = ImGui::Checkbox((std::string("##TreeNodeCBox") + suffix).c_str(), 
-                                   value,
-                                   ImGuiButtonFlags_PressedOnClick);
-    ImGui::PopStyleColor(popColors);
-    ImGui::PopStyleVar();
-
-    return toggled;
-}
-
 bool LayerStackWidget::DrawLayerTreeNode(const LayerPtr& layer, const int& index, bool& opened)
 {
     bool somethingChanged = false;
@@ -204,18 +174,47 @@ bool LayerStackWidget::DrawLayerTreeNode(const LayerPtr& layer, const int& index
 
     // Dual checkbox
     bool dual = layer->IsDual();
-    if (DrawTreeNodeCheckBox("Dual :", layerName + "Dual", &dual, 140.0f))
+    ImGui::SameLine(ImGui::GetWindowWidth() - 69.0f - (float)dual);
+    ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 1.0f);
+    if (ImGui::CheckedTextButton((std::string("##DualToggle") + layerName).c_str(), "D*", "D", dual))
     {
-        layer->SetDual(dual);
+        layer->SetDual(!dual);
         somethingChanged = true;
         toggled = true;
     }
 
+    // Animated checkbox
+    auto provider = std::dynamic_pointer_cast<Explicit>(layer->GetProvider());
+    bool animated = provider && provider->IsAnimated();
+    ImGui::SameLine(ImGui::GetWindowWidth() - 46.0f);
+    ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 2.0f);
+    ImGui::BeginDisabled(!(bool)provider);
+    if (ImGui::CheckedIconButton((std::string("##AnimatedToggle") + layerName).c_str(), 
+                                 ICON_PERSON_RUNNING, 
+                                 ICON_PERSON, 
+                                 animated, 
+                                 IconSize::Medium,
+                                 ImVec4(0.8f, 0.8f, 0.8f, 1.0f),
+                                 ImVec4(1.0f, 1.0f, 1.0f, 1.0f),
+                                 provider ? ImVec4(0.09f, 0.09f, 0.09f, 1.0f) : ImVec4(0.5f, 0.05f, 0.05f, 1.0f)))
+    {
+        provider->SetAnimated(!animated);
+        somethingChanged = true;
+        toggled = true;
+    }
+    ImGui::EndDisabled();
+
     // Visibility checkbox
     bool visible = layer->IsVisible();
-    if (DrawTreeNodeCheckBox("Visible :", layerName + "Visible", &visible, 72.0f))
+    ImGui::SameLine(ImGui::GetWindowWidth() - 26.0f);
+    ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 3.0f);
+    if (ImGui::CheckedIconButton((std::string("##VisibleToggle") + layerName).c_str(), 
+                                 ICON_EYE, 
+                                 ICON_EYE_SLASH, 
+                                 visible, 
+                                 IconSize::Small))
     {
-        layer->SetVisible(visible);
+        layer->SetVisible(!visible);
         somethingChanged = true;
         toggled = true;
     }
@@ -317,30 +316,6 @@ bool DrawProviderComboBox(const LayerPtr& layer)
 
         ImGui::EndCombo();
     }
-
-    // Animated Checkbox
-    auto animatedProvider = std::dynamic_pointer_cast<Explicit>(provider);
-    if (!animatedProvider)
-    {
-        return somethingChanged;
-    }
-
-    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
-    ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, ImVec4(0.0f, 0.0f, 0.0f, 1.0f));
-    ImGui::PushStyleColor(ImGuiCol_FrameBgActive, ImVec4(0.0f, 0.0f, 0.0f, 1.0f));
-
-    ImGui::SameLine(ImGui::GetWindowWidth() - 89.0f);
-    ImGui::Text("Animated :");
-    ImGui::SameLine();
-    ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 3);
-    bool animated = animatedProvider->IsAnimated();
-    if (ImGui::Checkbox((std::string("##AnimatedCBox") + suffix).c_str(), &animated))
-    {
-        animatedProvider->SetAnimated(animated);
-        somethingChanged = true;
-    }
-    ImGui::PopStyleColor(2);
-    ImGui::PopStyleVar();
 
     return somethingChanged;
 }
@@ -601,11 +576,14 @@ bool DrawExplicitProvider(const LayerPtr& layer)
     }
     ImGui::EndDisabled();
 
+    ImGui::Spacing();
+    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(5, 1));
     if (ImGui::Button("+"))
     {
         objects.push_back(c3ga::point(0.0, 0.0, 0.0));
         somethingChanged = true;
     }
+    ImGui::PopStyleVar();
 
     if (somethingChanged) {
         layer->SetDirty(DirtyBits_Provider);
@@ -769,24 +747,12 @@ bool DrawSource(const LayerPtrArray& layers, const LayerPtr& currentLayer, Layer
         ImGui::EndCombo();
     }
 
-    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
-    ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, ImVec4(0.0f, 0.0f, 0.0f, 1.0f));
-    ImGui::PushStyleColor(ImGuiCol_FrameBgActive, ImVec4(0.0f, 0.0f, 0.0f, 1.0f));
-    int popColors = 2;
-
-    ImGui::SameLine();
-    ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 5.0f);
-    ImGui::AlignTextToFramePadding();
-    ImGui::Text("Dual :");
-    ImGui::SameLine();
-    ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 3.0f);
     bool dual = currentLayer->SourceIsDual(index);
-    if (ImGui::Checkbox((std::string("##SourceDualCBox") + suffix).c_str(), &dual))
+    ImGui::SameLine();
+    if (ImGui::CheckedTextButton((std::string("SourceDualCBox") + suffix).c_str(), "D*", "D", dual))
     {
-        currentLayer->SetSourceDual(index, dual);
+        currentLayer->SetSourceDual(index, !dual);
     }
-    ImGui::PopStyleColor(popColors);
-    ImGui::PopStyleVar();
 
     return somethingChanged;
 }
@@ -940,6 +906,37 @@ void LayerStackWidget::ClearSelection()
     m_selection.clear();
     m_sources.clear();
     m_lastIndex = -1; 
+}
+
+void LayerStackWidget::DeleteSelectedLayers()
+{
+    // Make sure we can delete the layers without causing too much trouble
+    for (const auto& layer : m_selection)
+    {
+        for (const auto& dest : layer->GetDestinations())
+        {
+            auto destination = dest.lock();
+            if (destination && !IsSelected(destination))
+            {
+                LOG_ERROR("Cannot remove the selected layers as other layers depend on them");
+                return;    
+            }            
+        }
+    }
+
+    // Delete the layers
+    for (const auto& layer : m_selection)
+    {
+        m_layerStack->RemoveLayer(layer);
+    }
+
+    ClearSelection();
+}
+
+void LayerStackWidget::Clear()
+{
+    m_layerStack->Clear();
+    ClearSelection();
 }
 
 bool LayerStackWidget::IsSource(const LayerPtr &layer) 

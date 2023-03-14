@@ -93,6 +93,7 @@ bool Layer::SourceIsDual(const uint32_t& index) const
 
 void Layer::SetSourceDual(const uint32_t& index, const bool& dual)
 {
+    std::cout << index << dual << std::endl;
     if (index < m_dualSources.size())
     {
         if (m_dualSources[index] != dual)

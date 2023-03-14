@@ -36,7 +36,7 @@ Texture::Texture()
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
     // Default filtering parameters
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     
     glBindTexture(GL_TEXTURE_2D, 0);
@@ -124,7 +124,7 @@ void Texture::SetData(const uint32_t& width, const uint32_t& height, void* data,
 
 TexturePtr Texture::Create()
 {
-    return TexturePtr();
+    return TexturePtr(new Texture);
 }
 
 TexturePtr Texture::Create(const uint32_t& width, const uint32_t& height,
@@ -160,5 +160,5 @@ TexturePtr Texture::FromImage(const ImagePtr& image, const GLenum& internalForma
         return TexturePtr(texture);
     }
 
-    return TexturePtr();
+    return Create();
 }
