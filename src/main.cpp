@@ -16,6 +16,7 @@
 #include <glm/gtx/string_cast.hpp>
 
 #include <imgui.h>
+#include <imgui_internal.h>
 
 #include <c3ga/Mvec.hpp>
 #include <c3gaTools.hpp>
@@ -129,9 +130,10 @@ int main(int argc, char* argv[])
 
         if (ImGui::BeginMainMenuBar())
         {
+            ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(6, 6));
             if (ImGui::BeginMenu("File"))
             {
-                if(ImGui::MenuItem("Clear context##MainMenuClearAll")) 
+                if(ImGui::MenuItem("  Clear context##MainMenuClearAll")) 
                 {
                     layerStackWid.Clear();
                     somethingChanged = true;
@@ -140,11 +142,28 @@ int main(int argc, char* argv[])
                 ImGui::EndMenu();
             }
 
+            if (ImGui::BeginMenu("Display"))
+            {
+                int displayMode = 0;
+                ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, -2));
+                ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 8));
+                ImGui::SeparatorText("Display Mode");
+                ImGui::RadioButton("Default##DisplayDefault", &displayMode, 0);
+                ImGui::RadioButton("Dual##DisplayDual",       &displayMode, 1);
+                ImGui::RadioButton("Both##DisplayBoth",       &displayMode, 2);
+                ImGui::PopStyleVar(2);
+
+                ImGui::Spacing();
+
+                ImGui::EndMenu();
+            }
+            ImGui::PopStyleVar();
+
             ImGui::EndMainMenuBar();
         }
 
         ImGui::End(); // Main Dockspace
-        // ImGui::ShowDemoWindow();
+        ImGui::ShowDemoWindow();
         somethingChanged |= layerStackWid.Draw();
 
         // // Render ImGui items

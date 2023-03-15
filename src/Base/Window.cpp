@@ -188,7 +188,7 @@ Window::Window(const WindowInternalData& settings) :
     ImGuiStyle& style = ImGui::GetStyle();
     style.WindowBorderSize = 0.0f;
     style.ChildBorderSize = 1.0f;
-    style.PopupBorderSize = 1.0f;
+    style.PopupBorderSize = 0.0f;
     style.FrameBorderSize = 0.0f;
     style.TabBorderSize = 0.0f;
     style.ScrollbarSize = 12.0f;
@@ -200,6 +200,9 @@ Window::Window(const WindowInternalData& settings) :
     style.ItemSpacing = ImVec2(4, 3);
     style.ItemInnerSpacing = ImVec2(3, 4);
     style.IndentSpacing = 12.0f;
+
+    style.SeparatorTextBorderSize = 1.0f;
+    style.SeparatorTextPadding = ImVec2(12, 0);
 
     // Set ImGui's font instead of using the rough default one
     Resolver& resolver = Resolver::Get();

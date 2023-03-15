@@ -2,6 +2,7 @@
 
 #include "Base/Logging.h"
 
+
 LayerPtrArray LayerStack::GetLayers() const
 {
     return m_layers;
@@ -130,13 +131,15 @@ LayerPtr LayerStack::NewCombination(const std::string& name,
 void LayerStack::ConnectLayers(const LayerPtr& source, const LayerPtr& destination) const
 {
     destination->AddSource(source);
-    source->AddDestination(destination);
+    if (source)
+        source->AddDestination(destination);
 }
 
 void LayerStack::DisconnectLayers(const LayerPtr& source, const LayerPtr& destination) const
 {
     destination->RemoveSource(source);
-    source->RemoveDestination(destination);
+    if (source)
+        source->RemoveDestination(destination);
 }
 
 std::string LayerStack::GetNextAvailableName(std::string basename) const

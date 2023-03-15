@@ -9,11 +9,25 @@
 #include <random>
 
 
+// == UUID ==
+
+static std::random_device layerUUIDGenerator;
+static std::uniform_int_distribution<uint32_t> nextLayerUUIDDistrib(1, 1024);
+
+static uint32_t lastLayerUUID;
+
+uint32_t GetNextUUID()
+{
+    lastLayerUUID += nextLayerUUIDDistrib(layerUUIDGenerator);
+    return lastLayerUUID;
+}
+
 // == Layer ==
 
 Layer::Layer(const std::string& name, 
              const MvecArray& objects) :
         m_name(name), 
+        m_uuid(GetNextUUID()),
         m_objects(objects), 
         m_isDual(false), 
         m_visibility(true), 
@@ -25,6 +39,7 @@ Layer::Layer(const std::string& name,
 Layer::Layer(const std::string& name, 
              const ProviderPtr& provider) :
         m_name(name), 
+        m_uuid(GetNextUUID()),
         m_isDual(false), 
         m_visibility(true), 
         m_provider(provider) 
@@ -93,7 +108,6 @@ bool Layer::SourceIsDual(const uint32_t& index) const
 
 void Layer::SetSourceDual(const uint32_t& index, const bool& dual)
 {
-    std::cout << index << dual << std::endl;
     if (index < m_dualSources.size())
     {
         if (m_dualSources[index] != dual)

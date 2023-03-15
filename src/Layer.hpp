@@ -38,6 +38,8 @@ public:
     ~Layer() = default;
 
     inline std::string GetName() const { return m_name; }
+    inline void SetName(const std::string& name) { m_name = name; }
+    inline uint32_t GetUUID() const { return m_uuid; }
 
     inline const MvecArray& GetObjects() const { return m_objects; }
     inline MvecArray& GetObjects() { return m_objects; }
@@ -70,7 +72,6 @@ public:
     inline bool IsDual() const { return m_isDual; }
     void SetDual(const bool& dual);
 
-
     bool Update();
 
     inline MvecArray::iterator begin()             { return m_objects.begin(); }
@@ -82,6 +83,7 @@ public:
 
 private:
     std::string m_name;
+    uint32_t m_uuid;
     bool m_visibility;
 
     MvecArray m_objects;

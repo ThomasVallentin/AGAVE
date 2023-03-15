@@ -48,6 +48,8 @@ private:
     static const char* s_visibleIconName;
     TexturePtr m_notVisibleIcon;
     static const char* s_notVisibleIconName;
+
+    uint32_t m_renamedUUID; 
 };
 
 #endif

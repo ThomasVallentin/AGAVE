@@ -9,6 +9,7 @@
 
 #include <imgui.h>
 #include <imgui_internal.h>
+#include <misc/cpp/imgui_stdlib.h>
 
 
 const char* LayerStackWidget::s_dualIconName = "resources/icons/dualIcon.png";
@@ -127,7 +128,9 @@ bool LayerStackWidget::DrawLayerTreeNode(const LayerPtr& layer, const int& index
 {
     bool somethingChanged = false;
 
-    const std::string layerName = layer->GetName();
+    std::string layerName = layer->GetName();
+    uint32_t uuid = layer->GetUUID();
+    std::string identifier = std::to_string(uuid);
     ImGuiTreeNodeFlags nodeFlags = (ImGuiTreeNodeFlags_FramePadding |
                                     ImGuiTreeNodeFlags_Framed |
                                     ImGuiTreeNodeFlags_OpenOnArrow |
@@ -152,11 +155,32 @@ bool LayerStackWidget::DrawLayerTreeNode(const LayerPtr& layer, const int& index
 
     // Create the tree node
     ImGui::Separator();
-    opened = ImGui::TreeNodeEx((layerName + "##LayerStackNode").c_str(), nodeFlags);
+    std::string treeNodeLabel = (m_renamedUUID == uuid ? 
+                                 std::string("###LayerStackNode") + identifier : 
+                                 layerName + "###LayerStackNode" + identifier);
+    opened = ImGui::TreeNodeEx(treeNodeLabel.c_str(), nodeFlags);
     ImGui::PopStyleColor(popColors);
-
+    
     // Processing clicked before creating the visibility checkbox it messes the clicked up 
     bool clicked = ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen();
+
+    static char renamedName[256];
+    static bool renameIgnoreActive = false;
+    if (m_renamedUUID == uuid)
+    {
+        ImGui::SameLine();
+        ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 13.0f);
+        ImGui::SetKeyboardFocusHere();
+        ImGui::InputText("##RenameLayer", renamedName, 256, ImGuiInputTextFlags_AutoSelectAll);
+        // The active status has a 1 frame delay so we only care about it on the next frame
+        if (!renameIgnoreActive && !ImGui::IsItemActive())
+        {
+            layer->SetName(std::string(renamedName));
+            strcpy(renamedName, "");
+            m_renamedUUID = 0;
+        }
+        renameIgnoreActive = false;
+    }
 
     // Context menu
     if (ImGui::BeginPopupContextItem())
@@ -219,11 +243,21 @@ bool LayerStackWidget::DrawLayerTreeNode(const LayerPtr& layer, const int& index
         toggled = true;
     }
 
-    // Update selection if nothing was toggled nor any item was expanded
+    // Handle mouse clicks
     if (!toggled && clicked) 
     {
-        // Shift modifier -> Range selection
-        if (Inputs::IsKeyPressed(KeyCode::LeftShift)) {
+        // Double click -> rename the current layer
+        if (clicked && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
+        {
+            strcpy(renamedName, layerName.c_str());
+            m_renamedUUID = uuid;
+            ImGui::SetFocusID(ImGui::GetID("##RenameLayer"), ImGui::GetCurrentWindow());
+            renameIgnoreActive = true;
+        }
+
+        // Shift modifier + click -> Range selection
+        else if (Inputs::IsKeyPressed(KeyCode::LeftShift)) 
+        {
             if (m_lastIndex >= 0)
             {
                 int minIndex = index;
@@ -242,7 +276,7 @@ bool LayerStackWidget::DrawLayerTreeNode(const LayerPtr& layer, const int& index
             m_lastIndex = index;
         }
 
-        // Ctrl modifier -> Toggle selection
+        // Ctrl modifier + click -> Toggle selection
         else if (Inputs::IsKeyPressed(KeyCode::LeftCtrl))
         {
             if (isSelected){
@@ -253,7 +287,7 @@ bool LayerStackWidget::DrawLayerTreeNode(const LayerPtr& layer, const int& index
             }
         }
 
-        // No modifier -> Replace selection
+        // Simple click -> Replace selection
         else {
             ClearSelection();
             SelectLayer(layer);
@@ -297,10 +331,10 @@ bool DrawProviderComboBox(const LayerPtr& layer)
     };
 
     auto provider = layer->GetProvider();
-    std::string suffix = layer->GetName();
+    std::string identifier = std::to_string(layer->GetUUID());
     uint32_t currentIndex = provider ? provider->GetType() : ProviderType_None;
     ImGui::SetNextItemWidth(150);
-    if (ImGui::BeginCombo((std::string("##ProviderCombo") + suffix).c_str(), providerNames[currentIndex]))
+    if (ImGui::BeginCombo((std::string("##ProviderCombo") + identifier).c_str(), providerNames[currentIndex]))
     {
         for (size_t i=0 ; i < IM_ARRAYSIZE(providerNames) ; ++i)
         {
@@ -351,7 +385,8 @@ bool DrawOperatorComboBox(const LayerPtr& layer, const std::shared_ptr<OperatorB
                             Operators::GeomProduct};
 
     uint32_t currentIndex = indexFromOperator(provider->GetOperator());
-    if (ImGui::BeginCombo((std::string("##OperatorCombo") + layer->GetName()).c_str(), opNames[currentIndex]))
+    if (ImGui::BeginCombo((std::string("##OperatorCombo") + std::to_string(layer->GetUUID())).c_str(), 
+                          opNames[currentIndex]))
     {
         for (size_t i=0 ; i < IM_ARRAYSIZE(opNames) ; ++i)
         {
@@ -466,9 +501,9 @@ bool DrawExplicitProvider(const LayerPtr& layer)
         std::string objTypeName = c3ga::typeToName(objType);
 
         // Type combo box
-        std::string suffix = layer->GetName() + std::to_string(i);
+        std::string identifier = std::to_string(layer->GetUUID()) + std::to_string(i);
         ImGui::SetNextItemWidth(100);
-        if (ImGui::BeginCombo((std::string("##ObjTypeCombo") + suffix).c_str(), objTypeName.c_str()))
+        if (ImGui::BeginCombo((std::string("##ObjTypeCombo") + identifier).c_str(), objTypeName.c_str()))
         {
             for (size_t i=0 ; i < IM_ARRAYSIZE(typeNames) ; i++)
             {
@@ -494,7 +529,7 @@ bool DrawExplicitProvider(const LayerPtr& layer)
             case c3ga::MvecType::Point: {
                 float position[3] = {(float)obj[c3ga::E1], (float)obj[c3ga::E2], (float)obj[c3ga::E3]};
                 ImGui::SameLine();
-                if (DrawPositionControl(suffix, position, sensitivity, availableWidth / 3.0f)) {
+                if (DrawPositionControl(identifier, position, sensitivity, availableWidth / 3.0f)) {
                     obj = c3ga::point((double)position[0], (double)position[1], (double)position[2]);
                     somethingChanged = true;
                 }
@@ -511,11 +546,11 @@ bool DrawExplicitProvider(const LayerPtr& layer)
 
                 ImGui::SameLine();
                 float center[3] = {(float)c[c3ga::E1], (float)c[c3ga::E2], (float)c[c3ga::E3]};
-                bool sphereChanged = DrawPositionControl(suffix, center, sensitivity, availableWidth / 4.0f);
+                bool sphereChanged = DrawPositionControl(identifier, center, sensitivity, availableWidth / 4.0f);
 
                 ImGui::SameLine();
                 float radius = (float)r;
-                sphereChanged |= DrawRadiusControl(suffix, &radius, sensitivity, availableWidth / 4.0f);
+                sphereChanged |= DrawRadiusControl(identifier, &radius, sensitivity, availableWidth / 4.0f);
                 if (radius == 0.0)
                     radius = 1e-6;
 
@@ -540,11 +575,11 @@ bool DrawExplicitProvider(const LayerPtr& layer)
                 
                 ImGui::SameLine();
                 float center[3] = {(float)c[c3ga::E1], (float)c[c3ga::E2], (float)c[c3ga::E3]};
-                bool sphereChanged = DrawPositionControl(suffix, center, sensitivity, availableWidth / 4.0f);
+                bool sphereChanged = DrawPositionControl(identifier, center, sensitivity, availableWidth / 4.0f);
 
                 ImGui::SameLine();
                 float radius = (float)r;
-                sphereChanged |= DrawRadiusControl(suffix, &radius, sensitivity, availableWidth / 4.0f);
+                sphereChanged |= DrawRadiusControl(identifier, &radius, sensitivity, availableWidth / 4.0f);
                 if (radius == 0.0)
                     radius = 1e-6;
 
@@ -565,7 +600,7 @@ bool DrawExplicitProvider(const LayerPtr& layer)
         ImGui::SameLine(ImGui::GetWindowContentRegionMax().x - 16.0f);
         ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 1);
         ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(5, 2));
-        if (ImGui::Button((std::string("X##RemoveButton") + suffix).c_str()))
+        if (ImGui::Button((std::string("X##RemoveButton") + identifier).c_str()))
         {
             objects.erase(objects.begin() + i);
             somethingChanged = true;
@@ -599,7 +634,7 @@ bool DrawRandomGenerator(const LayerPtr& layer)
 {
     bool somethingChanged = false;
     auto provider = std::dynamic_pointer_cast<RandomGenerator>(layer->GetProvider());
-    std::string suffix = layer->GetName();
+    std::string identifier = std::to_string(layer->GetUUID());
 
     // ObjectType combo box
     c3ga::MvecType types[] = {c3ga::MvecType::Point,
@@ -616,7 +651,7 @@ bool DrawRandomGenerator(const LayerPtr& layer)
     ImGui::Text("Type :");
     ImGui::SameLine();
     ImGui::SetNextItemWidth(100);
-    if (ImGui::BeginCombo((std::string("##RandomGeneratorObjTypeCombo") + suffix).c_str(), objTypeName))
+    if (ImGui::BeginCombo((std::string("##RandomGeneratorObjTypeCombo") + identifier).c_str(), objTypeName))
     {
         for (size_t i=0 ; i < IM_ARRAYSIZE(typeNames) ; i++)
         {
@@ -638,7 +673,7 @@ bool DrawRandomGenerator(const LayerPtr& layer)
     ImGui::Text("Count :");
     ImGui::SameLine();
     ImGui::SetNextItemWidth(75);
-    if (ImGui::DragInt((std::string("##RandomGeneratorCountDrag") + suffix).c_str(), &count, 0.05f, 0, 10000))
+    if (ImGui::DragInt((std::string("##RandomGeneratorCountDrag") + identifier).c_str(), &count, 0.05f, 0, 10000))
     {
         provider->SetCount(count);
         layer->SetDirty(DirtyBits_Provider);
@@ -650,7 +685,7 @@ bool DrawRandomGenerator(const LayerPtr& layer)
     ImGui::Text("Extents :");
     ImGui::SameLine();
     ImGui::SetNextItemWidth(75);
-    if (ImGui::DragFloat((std::string("##RandomGeneratorExtentsDrag") + suffix).c_str(), &extents, 0.05f))
+    if (ImGui::DragFloat((std::string("##RandomGeneratorExtentsDrag") + identifier).c_str(), &extents, 0.05f))
     {
         provider->SetExtents(extents);
         layer->SetDirty(DirtyBits_Provider);
@@ -672,7 +707,7 @@ bool DrawSubsetProvider(const LayerPtr& layer)
     ImGui::Text("Count :");
     ImGui::SameLine();
     ImGui::SetNextItemWidth(75);
-    if (ImGui::DragInt((std::string("##SubsetCountDrag") + layer->GetName()).c_str(), &count, 0.05f, -1, 1000))
+    if (ImGui::DragInt((std::string("##SubsetCountDrag") + std::to_string(layer->GetUUID())).c_str(), &count, 0.05f, -1, 1000))
     {
         provider->SetCount(count);
         layer->SetDirty(DirtyBits_Provider);
@@ -695,7 +730,7 @@ bool DrawSelfCombinationProvider(const LayerPtr& layer)
     ImGui::Text("Count :");
     ImGui::SameLine();
     ImGui::SetNextItemWidth(75);
-    if (ImGui::DragInt((std::string("##SelfCombinationCountDrag") + layer->GetName()).c_str(), &count, 0.05f, -1, 1000))
+    if (ImGui::DragInt((std::string("##SelfCombinationCountDrag") + std::to_string(layer->GetUUID())).c_str(), &count, 0.05f, -1, 1000))
     {
         provider->SetCount(count);
         layer->SetDirty(DirtyBits_Provider);
@@ -706,7 +741,7 @@ bool DrawSelfCombinationProvider(const LayerPtr& layer)
     ImGui::Text("Dimension :");
     ImGui::SameLine();
     ImGui::SetNextItemWidth(75);
-    if (ImGui::DragInt((std::string("##SelfCombinationDimensionDrag") + layer->GetName()).c_str(), &dimension, 0.05f, 0, 4))
+    if (ImGui::DragInt((std::string("##SelfCombinationDimensionDrag") + std::to_string(layer->GetUUID())).c_str(), &dimension, 0.05f, 0, 4))
     {
         provider->SetDimension(dimension);
         layer->SetDirty(DirtyBits_Provider);
@@ -723,11 +758,11 @@ bool DrawSource(const LayerPtrArray& layers, const LayerPtr& currentLayer, Layer
 {
     LayerPtr src = source.lock();
     const char* currentName = src ? src->GetName().c_str() : ""; 
-    const char* suffix = (currentLayer->GetName() + std::to_string(index)).c_str();
+    const char* identifier = (std::to_string(currentLayer->GetUUID()) + std::to_string(index)).c_str();
 
     bool somethingChanged = false;
     ImGui::SetNextItemWidth(150.0f);
-    if (ImGui::BeginCombo((std::string("##SourceCombo") + suffix).c_str(), currentName))
+    if (ImGui::BeginCombo((std::string("##SourceCombo") + identifier).c_str(), currentName))
     {
         for (size_t i = 0; i < layers.size(); i++)
         {
@@ -749,7 +784,7 @@ bool DrawSource(const LayerPtrArray& layers, const LayerPtr& currentLayer, Layer
 
     bool dual = currentLayer->SourceIsDual(index);
     ImGui::SameLine();
-    if (ImGui::CheckedTextButton((std::string("SourceDualCBox") + suffix).c_str(), "D*", "D", dual))
+    if (ImGui::CheckedTextButton((std::string("SourceDualCBox") + identifier).c_str(), "D*", "D", dual))
     {
         currentLayer->SetSourceDual(index, !dual);
     }
@@ -855,8 +890,10 @@ bool LayerStackWidget::DrawLayerContent(const LayerPtr& layer)
             for (const auto& src : layer->GetSources())
                 m_layerStack->DisconnectLayers(src.lock(), layer);
 
-            for (const auto& src : sources)
+            for (const auto& src : sources) {
                 m_layerStack->ConnectLayers(src.lock(), layer);
+
+            }
 
             UpdateSources();
         }
