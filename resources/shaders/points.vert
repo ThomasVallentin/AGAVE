@@ -16,5 +16,4 @@ void main()
     outVertex.position = position.xyz;
 
     gl_Position = position;
-    gl_PointSize = 5;
 }

@@ -1,4 +1,5 @@
 #include "Simulation.hpp"
+#include "Samples.hpp"
 
 #include "UI/LayerStackWidget.hpp"
 #include "UI/Icons.hpp"
@@ -48,21 +49,16 @@ int main(int argc, char* argv[])
     window.SetEventCallback(eventCallback);
 
     // Initialize the global "managers" 
-    LayerStackPtr stack = std::make_shared<LayerStack>();
     SimulationEngine& simEngine = SimulationEngine::Init();
+
+    LayerStackPtr layerStack = std::make_shared<LayerStack>();
+    Samples::LoadCompleteExample(layerStack);
+
     Renderer renderer;
+    RenderSettings& renderSettings = renderer.GetRenderSettings();
 
     // Generate the content of the scene
-    MvecArray objects = {c3ga::dualSphere<double>(0, 0, 0, 1).dual()};
-    auto lyr1 = stack->NewLayer("Layer1", objects);
-    objects = {c3ga::dualSphere<double>(0, 1, 0, 1).dual()};
-    auto lyr2 = stack->NewLayer("Layer2", objects);
-    auto lyr3 = stack->NewCombination("Layer3", lyr1, lyr2, Operators::OuterProduct);
-    lyr3->SetDual(true);
-    lyr3->SetSourceDual(0, true);
-    lyr3->SetSourceDual(1, true);
-
-    LayerStackWidget layerStackWid(stack);
+    LayerStackWidget layerStackWid(layerStack);
 
     double prevTime = window.GetTime();
     double currTime, deltaTime;
@@ -75,13 +71,13 @@ int main(int argc, char* argv[])
         simEngine.Update(deltaTime);
 
         // Set dirty all the animated layers
-        for (const auto& layer : stack->GetLayers())
+        for (const auto& layer : layerStack->GetLayers())
             if (auto provider = std::dynamic_pointer_cast<Explicit>(layer->GetProvider()))
                 if (provider->IsAnimated())
                     layer->SetDirty(DirtyBits_Provider);
 
         // Update all the visible layers
-        for (const auto& layer : stack->GetLayers())
+        for (const auto& layer : layerStack->GetLayers())
             if (layer->IsVisible()) 
                 somethingChanged |= layer->Update();
 
@@ -90,7 +86,7 @@ int main(int argc, char* argv[])
         if (somethingChanged) {
             renderer.Invalidate();
         }
-        renderer.Render(stack, camera.GetViewProjectionMatrix());
+        renderer.Render(layerStack, camera.GetViewProjectionMatrix());
 
         // Reset the invalidation variable 
         somethingChanged = false;
@@ -130,13 +126,28 @@ int main(int argc, char* argv[])
 
         if (ImGui::BeginMainMenuBar())
         {
+            ImGui::PushStyleColor(ImGuiCol_Separator, ImVec4(0.3f, 0.3f, 0.3f, 1.0f));
             ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(6, 6));
             if (ImGui::BeginMenu("File"))
             {
-                if(ImGui::MenuItem("  Clear context##MainMenuClearAll")) 
+                if(ImGui::MenuItem("  New##FileMenuNew")) 
                 {
                     layerStackWid.Clear();
                     somethingChanged = true;
+                }
+
+                ImGui::MenuItem("  Open##FileMenuOpen", "", nullptr, false);
+
+                if(ImGui::BeginMenu("  Open sample##FileMenuOpenSamples")) 
+                {
+                    if(ImGui::MenuItem("  Spheres intersection##FileMenuLoadSpheresIntersect")) 
+                        Samples::LoadSpheresIntersect(layerStack);
+                    if(ImGui::MenuItem("  Planes intersection##FileMenuLoadPlanesIntersect")) 
+                        Samples::LoadPlanesIntersect(layerStack);
+                    if(ImGui::MenuItem("  Complete example##FileMenuLoadCompleteExample")) 
+                        Samples::LoadCompleteExample(layerStack);
+
+                    ImGui::EndMenu();
                 }
 
                 ImGui::EndMenu();
@@ -144,20 +155,34 @@ int main(int argc, char* argv[])
 
             if (ImGui::BeginMenu("Display"))
             {
-                int displayMode = 0;
-                ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, -2));
-                ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 8));
+                ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(4, 8));
                 ImGui::SeparatorText("Display Mode");
-                ImGui::RadioButton("Default##DisplayDefault", &displayMode, 0);
-                ImGui::RadioButton("Dual##DisplayDual",       &displayMode, 1);
-                ImGui::RadioButton("Both##DisplayBoth",       &displayMode, 2);
-                ImGui::PopStyleVar(2);
+                ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, -2));
+                ImGui::PushStyleVar(ImGuiStyleVar_ItemInnerSpacing, ImVec2(8, 8));
+                if (ImGui::RadioButton("Default##DisplayMenuDefault", 
+                                       renderSettings.displayMode == RenderSettings::DisplayMode::Default)){
+                    renderSettings.displayMode = RenderSettings::DisplayMode::Default;
+                    somethingChanged = true;
+                }
+                if (ImGui::RadioButton("Dual##DisplayMenuDual",       
+                                       renderSettings.displayMode == RenderSettings::DisplayMode::Dual)){
+                    renderSettings.displayMode = RenderSettings::DisplayMode::Dual;
+                    somethingChanged = true;
+                }
+                if (ImGui::RadioButton("Both##DisplayMenuBoth",       
+                                       renderSettings.displayMode == RenderSettings::DisplayMode::Both)){
+                    renderSettings.displayMode = RenderSettings::DisplayMode::Both;
+                    somethingChanged = true;
+                }
+                ImGui::PopStyleVar(3);
 
                 ImGui::Spacing();
 
                 ImGui::EndMenu();
             }
+
             ImGui::PopStyleVar();
+            ImGui::PopStyleColor();
 
             ImGui::EndMainMenuBar();
         }

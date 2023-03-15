@@ -66,11 +66,11 @@ Mvec<T> vector(const T& x, const T& y, const T& z)
 {		
     Mvec<T> result;
     
-    result[c3ga::E1] = x;
-    result[c3ga::E2] = y;
-    result[c3ga::E3] = z;
-    result[c3ga::Ei] = 0.0;
-    result[c3ga::E0] = 0.0;
+    result[E1] = x;
+    result[E2] = y;
+    result[E3] = z;
+    result[Ei] = 0.0;
+    result[E0] = 0.0;
 
     return result;
 }
@@ -120,7 +120,7 @@ MvecType getTypeOf(Mvec<T> mv)
 
         // extract properties
         T square = (mv | mv);
-        c3ga::Mvec<T> ei_outer_mv(c3ga::ei<T>() ^ mv);
+        Mvec<T> ei_outer_mv(ei<T>() ^ mv);
         bool squareToZero = (fabs(square) <= 1.0e3*epsilon);
         bool roundObject  = !(fabs(ei_outer_mv.quadraticNorm()) < epsilon);
         //return "squareToZero : " + std::to_string(squareToZero) + " | roundObject : " +  std::to_string(roundObject) + " | ei_outer_mv.norm() : " + std::to_string(ei_outer_mv.quadraticNorm()) + " | square : " + std::to_string(fabs(square));
@@ -173,7 +173,7 @@ MvecType getTypeOf(Mvec<T> mv)
                         return MvecType::DualCircle;
 
                     // for flat points and dual lines
-                    bool onlyBivectorInfinity = (fabs( ( (mv ^ c3ga::ei<double>() ) | c3ga::e0<double>() ).quadraticNorm()) < epsilon);
+                    bool onlyBivectorInfinity = (fabs( ( (mv ^ ei<double>() ) | e0<double>() ).quadraticNorm()) < epsilon);
 
                     // flat point
                     // no euclidian or eO bivector : only e_ix
@@ -210,7 +210,7 @@ MvecType getTypeOf(Mvec<T> mv)
 
 
                     // for dual flat points and lines
-                    bool onlyTrivectorInfinity = (fabs( ( (mv ^ c3ga::ei<double>() ) | c3ga::e0<double>() ).quadraticNorm()) < epsilon);
+                    bool onlyTrivectorInfinity = (fabs( ( (mv ^ ei<double>() ) | e0<double>() ).quadraticNorm()) < epsilon);
 
                     // dual flat point
                     // no e0 trivector
@@ -241,7 +241,7 @@ MvecType getTypeOf(Mvec<T> mv)
                         return MvecType::DualPoint;
 
                     // sphere and imaginary sphere: compute radius from dual 
-                    c3ga::Mvec<double> dualSphere = mv.dual();
+                    Mvec<double> dualSphere = mv.dual();
                     T dualSquare = dualSphere | dualSphere;
 
                     // sphere
@@ -364,9 +364,9 @@ Mvec<T> convert(const Mvec<T>& mv, const MvecType& fromType, const MvecType& toT
     // Returns as soon as possible if we cannot generate the requested MvecType
     switch (toType)
     {
-        case c3ga::MvecType::Point: 
-        case c3ga::MvecType::Sphere: 
-        case c3ga::MvecType::DualSphere: {
+        case MvecType::Point: 
+        case MvecType::Sphere: 
+        case MvecType::DualSphere: {
             break;
         }
 
@@ -378,30 +378,30 @@ Mvec<T> convert(const Mvec<T>& mv, const MvecType& fromType, const MvecType& toT
     T radius;
     switch (fromType)
     {
-        case c3ga::MvecType::Point: {
+        case MvecType::Point: {
             center = mv;
             radius = 1.0;
             break;
         }
 
-        case c3ga::MvecType::Sphere: 
-        case c3ga::MvecType::ImaginarySphere: {
+        case MvecType::Sphere: 
+        case MvecType::ImaginarySphere: {
             radiusAndCenterFromDualSphere(mv.dual(), radius, center);
             break;
         }
-        case c3ga::MvecType::DualSphere: 
-        case c3ga::MvecType::ImaginaryDualSphere: {
+        case MvecType::DualSphere: 
+        case MvecType::ImaginaryDualSphere: {
             radiusAndCenterFromDualSphere(mv, radius, center);
             break;
         }
 
-        case c3ga::MvecType::Circle: 
-        case c3ga::MvecType::ImaginaryCircle: {
+        case MvecType::Circle: 
+        case MvecType::ImaginaryCircle: {
             extractDualCircle(mv.dual(), radius, center, direction);
             break;
         }
-        case c3ga::MvecType::DualCircle: 
-        case c3ga::MvecType::ImaginaryDualCircle: {
+        case MvecType::DualCircle: 
+        case MvecType::ImaginaryDualCircle: {
             extractDualCircle(mv, radius, center, direction);
             break;
         }
@@ -412,13 +412,13 @@ Mvec<T> convert(const Mvec<T>& mv, const MvecType& fromType, const MvecType& toT
 
     switch (toType)
     {
-        case c3ga::MvecType::Point: {
+        case MvecType::Point: {
             return point(center[E1], center[E2], center[E3]);
         }
-        case c3ga::MvecType::Sphere: {
+        case MvecType::Sphere: {
             return dualSphere<T>(center[E1], center[E2], center[E3], radius).dual();
         }
-        case c3ga::MvecType::DualSphere: {
+        case MvecType::DualSphere: {
             return dualSphere<T>(center[E1], center[E2], center[E3], radius);
         }
 
@@ -435,6 +435,24 @@ Mvec<T> convert(const Mvec<T>& mv, const MvecType& toType)
 }
 
 
+// == Feature extraction functions ==
+
+template <typename T>
+void originAndDirectionFromDualLine(const Mvec<T>& dualLine, Mvec<T>& origin, Mvec<T>& direction)
+{
+    direction[E1] =  dualLine[E23];
+    direction[E2] = -dualLine[E13];
+    direction[E3] =  dualLine[E12];
+    origin[E1]    =  dualLine[E1i];
+    origin[E2]    =  dualLine[E2i];
+    origin[E3]    =  dualLine[E3i];
+    origin = (direction ^ origin) / (direction | direction);
+    origin = point(origin[E23], -origin[E13], origin[E12]);
+}
+
+
+// == Matrix extraction functions ==
+
 template <typename T>
 glm::mat4 extractDualCircleMatrix(const Mvec<T>& dualCircle)
 {
@@ -443,7 +461,7 @@ glm::mat4 extractDualCircleMatrix(const Mvec<T>& dualCircle)
     extractDualCircle(dualCircle, radius, center, direction);
 
     glm::mat4 t = glm::translate(glm::mat4(1.0f), {center[E1], center[E2], center[E3]});
-    glm::mat4 r = glm::toMat4(glm::quat{glm::vec3(0, 1, 0), glm::vec3(direction[E1], direction[E2], direction[E3])});
+    glm::mat4 r = glm::toMat4(glm::quat{glm::vec3(0, 0, 1), glm::vec3(direction[E1], direction[E2], direction[E3])});
     glm::mat4 s = glm::scale(glm::mat4(1.0f), glm::vec3(radius));
 
     return t * r * s;
@@ -462,10 +480,31 @@ glm::mat4 extractDualSphereMatrix(const Mvec<T>& dualSphere)
 }
 
 template <typename T>
-T extractDualSphereRadius(const Mvec<T>& dualSphere)
+glm::mat4 extractDualLineMatrix(const Mvec<T>& dualLine)
 {
-    return (dualSphere | dualSphere) / dualSphere[c3ga::E0];
+    Mvec<T> origin, direction;
+    originAndDirectionFromDualLine(dualLine, origin, direction);
+
+    glm::mat4 t = glm::translate(glm::mat4(1.0f), {origin[E1], origin[E2], origin[E3]});
+    glm::mat4 r = glm::toMat4(glm::quat{glm::vec3(0, 0, 1), glm::vec3(direction[E1], direction[E2], direction[E3])});
+
+    return t * r;
 }
+
+template <typename T>
+glm::mat4 extractDualPlaneMatrix(const Mvec<T>& dualPlane)
+{
+    T a = dualPlane[E1], b = dualPlane[E2], c = dualPlane[E3], d = dualPlane[Ei];
+    glm::vec3 normal = glm::normalize(glm::vec3(a, b, c));
+    glm::mat4 r = glm::toMat4(glm::quat{glm::vec3(0, 1, 0), normal});
+    
+    // We pin the plane to x=0 and z=0. In that way ax+by+cz+d=0 gives y=d/b
+    float y = b != 0 ? (d / b) : 0.0f;
+
+    return glm::translate(glm::mat4(1.0f), {0.0f, y, 0.0f}) * r;
+}
+
+
 
 
 } // namespace c3ga

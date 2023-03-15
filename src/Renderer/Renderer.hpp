@@ -9,11 +9,19 @@
 #include <c3ga/Mvec.hpp>
 
 
-// struct RenderSettings
-// {
 
-// };
+struct RenderSettings
+{
+    enum class DisplayMode
+    {
+        Default = 1 << 0,
+        Dual    = 1 << 1,
+        Both    = Default | Dual
+    };
 
+    float pointSize = 5.0f;
+    DisplayMode displayMode = DisplayMode::Default;
+};
 
 
 class Renderer
@@ -21,6 +29,9 @@ class Renderer
 public:
     Renderer();
     ~Renderer();
+
+    inline RenderSettings& GetRenderSettings() { return m_renderSettings; }
+    inline const RenderSettings& GetRenderSettings() const { return m_renderSettings; }
 
     void Invalidate();
     void Render(const LayerStackPtr& layerStack, 
@@ -48,6 +59,8 @@ private:
 
     ShaderPtr m_pointsShader;
     ShaderPtr m_linesShader;
+
+    RenderSettings m_renderSettings;
 
     bool m_isValid = false;
 };
