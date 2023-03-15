@@ -12,28 +12,14 @@
 #include <misc/cpp/imgui_stdlib.h>
 
 
-const char* LayerStackWidget::s_dualIconName = "resources/icons/dualIcon.png";
-const char* LayerStackWidget::s_notDualIconName = "resources/icons/notDualIcon.png";
-const char* LayerStackWidget::s_visibleIconName = "resources/icons/visibleIcon.png";
-const char* LayerStackWidget::s_notVisibleIconName = "resources/icons/notVisibleIcon.png";
-
 
 LayerStackWidget::LayerStackWidget()
 {
-    m_dualIcon = Resources::GetTexture(s_dualIconName);
-    m_notDualIcon = Resources::GetTexture(s_notDualIconName);
-    m_visibleIcon = Resources::GetTexture(s_visibleIconName);
-    m_notVisibleIcon = Resources::GetTexture(s_notVisibleIconName);
 }
 
 LayerStackWidget::LayerStackWidget(const LayerStackPtr& layerStack) :
         m_layerStack(layerStack)
 {
-    m_dualIcon = Resources::GetTexture(s_dualIconName);
-    m_notDualIcon = Resources::GetTexture(s_notDualIconName);
-    m_visibleIcon = Resources::GetTexture(s_visibleIconName);
-    m_notVisibleIcon = Resources::GetTexture(s_notVisibleIconName);
-    LOG_INFO("%d, %d, %d, %d", m_dualIcon->GetId(), m_notDualIcon->GetId(), m_visibleIcon->GetId(), m_notVisibleIcon->GetId());
 }
 
 void LayerStackWidget::SetLayerStack(const LayerStackPtr& layerStack)

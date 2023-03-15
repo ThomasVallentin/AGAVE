@@ -40,15 +40,6 @@ private:
 
     int m_lastIndex;
 
-    TexturePtr m_dualIcon;
-    static const char* s_dualIconName;
-    TexturePtr m_notDualIcon;
-    static const char* s_notDualIconName;
-    TexturePtr m_visibleIcon;
-    static const char* s_visibleIconName;
-    TexturePtr m_notVisibleIcon;
-    static const char* s_notVisibleIconName;
-
     uint32_t m_renamedUUID; 
 };
 
