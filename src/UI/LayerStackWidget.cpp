@@ -455,6 +455,44 @@ bool DrawPositionControl(const std::string& name, float* position, const float& 
     return somethingChanged;
 }
 
+bool DrawPlaneControl(const std::string& name, float* plane, const float& sensitivity=0.05f, const float& width=100.0f) 
+{
+    bool somethingChanged = false;
+
+    // A
+    somethingChanged |= DrawDragControl("A", (std::string("##PlaneDragFloatX") + name).c_str(), 
+                                        plane, 
+                                        ImVec4(0.2, 0.2, 0.8, 1.0),
+                                        sensitivity,
+                                        width);
+
+    // B
+    ImGui::SameLine();
+    somethingChanged |= DrawDragControl("B", (std::string("##PlaneDragFloatY") + name).c_str(), 
+                                        &plane[1], 
+                                        ImVec4(0.2, 0.2, 0.8, 1.0),
+                                        sensitivity,
+                                        width);
+
+    // C
+    ImGui::SameLine();
+    somethingChanged |= DrawDragControl("C", (std::string("##PlaneDragFloatC") + name).c_str(), 
+                                        &plane[2], 
+                                        ImVec4(0.2, 0.2, 0.8, 1.0),
+                                        sensitivity,
+                                        width);
+
+    // Z
+    ImGui::SameLine();
+    somethingChanged |= DrawDragControl("D", (std::string("##PlaneDragFloatZ") + name).c_str(), 
+                                        &plane[3], 
+                                        ImVec4(0.2, 0.2, 0.8, 1.0),
+                                        sensitivity,
+                                        width);
+
+    return somethingChanged;
+}
+
 bool DrawRadiusControl(const std::string& name, float* radius, const float& sensitivity=0.05f, const float& width=100.0f)
 {
     return DrawDragControl("R", (std::string("##RadiusDragFloatY") + name).c_str(), 
@@ -468,11 +506,15 @@ bool DrawExplicitProvider(const LayerPtr& layer)
 {
     bool somethingChanged = false;
     c3ga::MvecType types[] = {c3ga::MvecType::Point,
-                          c3ga::MvecType::Sphere,
-                          c3ga::MvecType::DualSphere};
+                              c3ga::MvecType::Sphere,
+                              c3ga::MvecType::DualSphere,
+                              c3ga::MvecType::Plane,
+                              c3ga::MvecType::DualPlane};
     const char* typeNames[] = {"Point",
                                "Sphere",
-                               "DualSphere"};
+                               "DualSphere",
+                               "Plane",
+                               "DualPlane"};
     auto& objects = layer->GetObjects();
     auto provider = std::dynamic_pointer_cast<Explicit>(layer->GetProvider());
 
@@ -509,7 +551,7 @@ bool DrawExplicitProvider(const LayerPtr& layer)
         // Details
         float availableWidth = ImGui::GetContentRegionAvail().x - 100.0f - 14.0f;
         float sensitivity = 0.05f;
-        int itemCount = 0;
+        ImVec2 removeButtonOffset(0.0f, 1.0f);
         switch (objType)
         {
             case c3ga::MvecType::Point: {
@@ -519,7 +561,6 @@ bool DrawExplicitProvider(const LayerPtr& layer)
                     obj = c3ga::point((double)position[0], (double)position[1], (double)position[2]);
                     somethingChanged = true;
                 }
-                itemCount = 3;
                 break;
             }
 
@@ -527,8 +568,7 @@ bool DrawExplicitProvider(const LayerPtr& layer)
             case c3ga::MvecType::ImaginarySphere: {
                 c3ga::Mvec<double> c;
                 double r;
-                c3ga::radiusAndCenterFromDualSphere(obj.dual(), r, c);
-                r = -r;
+                c3ga::radiusAndCenterFromDualSphere(-obj.dual(), r, c);
 
                 ImGui::SameLine();
                 float center[3] = {(float)c[c3ga::E1], (float)c[c3ga::E2], (float)c[c3ga::E3]};
@@ -547,9 +587,6 @@ bool DrawExplicitProvider(const LayerPtr& layer)
                                            (double)radius).dual();
                     somethingChanged = true;
                 }
-
-                itemCount = 4;
-
                 break;
             }
             
@@ -576,15 +613,124 @@ bool DrawExplicitProvider(const LayerPtr& layer)
                                            (double)radius);
                     somethingChanged = true;
                 }
+                break;
+            }
+        
+            case c3ga::MvecType::Plane: {
+                auto plane = obj.dual();
+                float values[4] = {(float)plane[c3ga::E1], 
+                                   (float)plane[c3ga::E2],
+                                   (float)plane[c3ga::E3],
+                                   (float)plane[c3ga::Ei]
+                                  };
 
-                itemCount = 4;
+                ImGui::SameLine();
+                if (DrawPlaneControl(identifier, values, sensitivity, availableWidth / 4.0f)) {
+                    plane = c3ga::Mvec<double>();
+                    plane[c3ga::E1] = (double)values[0];
+                    plane[c3ga::E2] = (double)values[1];
+                    plane[c3ga::E3] = (double)values[2];
+                    plane[c3ga::Ei] = (double)values[3];
+                    obj = -plane.dual();
+                    somethingChanged = true;
+                }
+                break;
+            }
+
+            case c3ga::MvecType::DualPlane: {
+                float values[4] = {(float)obj[c3ga::E1], 
+                                   (float)obj[c3ga::E2],
+                                   (float)obj[c3ga::E3],
+                                   (float)obj[c3ga::Ei]
+                                  };
+
+                LOG_INFO("pre %f, %f, %f, %f", values[0], values[1], values[2], values[3]);
+                if (DrawPlaneControl(identifier, values, sensitivity, availableWidth / 4.0f)) {
+                    obj[c3ga::E1] = (double)values[0];
+                    obj[c3ga::E2] = (double)values[1];
+                    obj[c3ga::E3] = (double)values[2];
+                    obj[c3ga::Ei] = (double)values[3];
+                    somethingChanged = true;
+                }
+                break;
+            }
+        
+            case c3ga::MvecType::Line: {
+                bool lineChanged = false;
+                auto line = obj.dual();
+
+                c3ga::Mvec<double> origin, direction;
+                c3ga::originAndDirectionFromDualLine(line, origin, direction);
+                direction /= direction.norm();
+                float org[3] = {(float)origin[c3ga::E1], (float)origin[c3ga::E2], (float)origin[c3ga::E3]};
+                ImGui::SameLine();
+                ImGui::Text("Origin");
+                ImGui::SameLine();
+                availableWidth -= 39.0f;
+                if (DrawPositionControl(identifier, org, sensitivity, availableWidth / 3.0f)) {
+                    origin = c3ga::point((double)org[0], (double)org[1], (double)org[2]);
+                    lineChanged = true;
+                }
+
+                float dir[3] = {(float)direction[c3ga::E1], (float)direction[c3ga::E2], (float)direction[c3ga::E3]};
+                ImGui::SetCursorPosX(142);
+                ImGui::Text("Dir");
+                ImGui::SameLine();
+                if (DrawPositionControl(identifier + "Direction", dir, sensitivity, availableWidth / 3.0f)) {
+                    direction = c3ga::vector((double)dir[0], (double)dir[1], (double)dir[2]);
+                    lineChanged = true;
+                }
+
+                if (lineChanged)
+                {
+                    obj = (origin ^ direction ^ c3ga::ei<double>());
+                    somethingChanged |= true;
+                }
+
+                removeButtonOffset = ImVec2(0.0f, -9.0f);
+
+                break;
+            }
+
+            case c3ga::MvecType::DualLine: {
+                bool lineChanged = false;
+
+                c3ga::Mvec<double> origin, direction;
+                c3ga::originAndDirectionFromDualLine(obj, origin, direction);
+                direction /= direction.norm();
+                float org[3] = {(float)origin[c3ga::E1], (float)origin[c3ga::E2], (float)origin[c3ga::E3]};
+                ImGui::SameLine();
+                ImGui::Text("Origin");
+                ImGui::SameLine();
+                availableWidth -= 39.0f;
+                if (DrawPositionControl(identifier, org, sensitivity, availableWidth / 3.0f)) {
+                    origin = c3ga::point((double)org[0], (double)org[1], (double)org[2]);
+                    lineChanged = true;
+                }
+
+                float dir[3] = {(float)direction[c3ga::E1], (float)direction[c3ga::E2], (float)direction[c3ga::E3]};
+                ImGui::SetCursorPosX(142);
+                ImGui::Text("Dir");
+                ImGui::SameLine();
+                if (DrawPositionControl(identifier + "Direction", dir, sensitivity, availableWidth / 3.0f)) {
+                    direction = c3ga::vector((double)dir[0], (double)dir[1], (double)dir[2]);
+                    lineChanged = true;
+                }
+
+                if (lineChanged)
+                {
+                    obj = (origin ^ direction ^ c3ga::ei<double>());
+                    somethingChanged |= true;
+                }
+
+                removeButtonOffset = ImVec2(0.0f, -9.0f);
 
                 break;
             }
         }
 
         ImGui::SameLine(ImGui::GetWindowContentRegionMax().x - 16.0f);
-        ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 1);
+        ImGui::SetCursorPos(ImGui::GetCursorPos() + removeButtonOffset);
         ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(5, 2));
         if (ImGui::Button((std::string("X##RemoveButton") + identifier).c_str()))
         {

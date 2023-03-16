@@ -50,15 +50,15 @@ void LoadCompleteExample(const LayerStackPtr& layerStack)
     layerStack->Clear();
     
     // Objects layers
-    MvecArray objects = {c3ga::dualSphere<double>(2, 0, 2, 1).dual()};
+    MvecArray objects = {c3ga::dualSphere<double>(2, 0.5, 2, 1).dual()};
     auto sphere1 = layerStack->NewLayer("Sphere 1", objects);
 
-    objects = {c3ga::dualSphere<double>(2, 1, 2, 1).dual()};
+    objects = {c3ga::dualSphere<double>(2, 1.5, 2, 1).dual()};
     auto sphere2 = layerStack->NewLayer("Sphere 2", objects);
 
-    objects = {c3ga::point<double>(2, 2, 0) ^
-               c3ga::point<double>(1, 2, 1) ^
-               c3ga::point<double>(3, 2, 4) ^
+    objects = {c3ga::point<double>(2, 0, 0) ^
+               c3ga::point<double>(1, 0, 1) ^
+               c3ga::point<double>(3, 0, 4) ^
                c3ga::ei<double>()};
     auto plane1 = layerStack->NewLayer("Plane 1", objects);
 
@@ -81,9 +81,9 @@ void LoadCompleteExample(const LayerStackPtr& layerStack)
     planesIntersect->SetSourceDual(1, true);
 
     auto spherePlaneIntersect = layerStack->NewCombination("Sphere plane intersection", sphere1, plane1, Operators::OuterProduct);
-    planesIntersect->SetDual(true);
-    planesIntersect->SetSourceDual(0, true);
-    planesIntersect->SetSourceDual(1, true);
+    spherePlaneIntersect->SetDual(true);
+    spherePlaneIntersect->SetSourceDual(0, true);
+    spherePlaneIntersect->SetSourceDual(1, true);
 }
 
 
