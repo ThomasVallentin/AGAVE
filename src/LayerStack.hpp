@@ -16,7 +16,8 @@ public:
     LayerStack() = default;
     ~LayerStack() = default;
 
-    LayerPtrArray GetLayers() const;
+    LayerPtr GetLayer(const uint32_t& index) const;
+    const LayerPtrArray& GetLayers() const;
     void AddLayer(const LayerPtr& layer);
     void RemoveLayer(const LayerPtr& layer);
     void Clear();

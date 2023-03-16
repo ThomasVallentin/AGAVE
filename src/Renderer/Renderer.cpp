@@ -1,6 +1,7 @@
 #include "Renderer.hpp"
 #include "Shapes.hpp"
 
+#include "c3gaTools.hpp"
 #include "C3GAUtils.hpp"
 
 #include "Base/Resolver.h"
@@ -51,12 +52,12 @@ void Renderer::Invalidate()
     m_isValid = false;
 }
 
-void Renderer::Render(const LayerStackPtr& layerStack,
+void Renderer::Render(const LayerPtrArray& layers,
                       const glm::mat4& viewProjMatrix) 
 {
     if (!m_isValid)
     {
-        BuildBatches(layerStack);
+        BuildBatches(layers);
     }
 
     glPointSize(m_renderSettings.pointSize);
@@ -84,14 +85,14 @@ void Renderer::Render(const LayerStackPtr& layerStack,
     m_planes.Render();
 }
 
-void Renderer::BuildBatches(const LayerStackPtr& layerStack) 
+void Renderer::BuildBatches(const LayerPtrArray& layers) 
 {
     std::vector<glm::vec3> points;
     std::vector<glm::mat4> spheres;
     std::vector<glm::mat4> circles;
     std::vector<glm::mat4> planes;
     std::vector<glm::mat4> lines;
-    for (const auto& layer : layerStack->GetLayers())
+    for (const auto& layer : layers)
     {
         if (!layer->IsVisible()) {
             continue;
@@ -103,61 +104,86 @@ void Renderer::BuildBatches(const LayerStackPtr& layerStack)
             {
                 // Points
                 case c3ga::MvecType::Point: {
-                    if ((int)m_renderSettings.displayMode & (int)RenderSettings::DisplayMode::Default)
+                    if ((int)m_renderSettings.dualMode & (int)DualMode_Default)
                         points.push_back({obj[c3ga::E1], obj[c3ga::E2], obj[c3ga::E3]});
                     break;
+                }
+
+                // Flat point
+                case c3ga::MvecType::FlatPoint: {
+                    c3ga::Mvec<double> flatPoint;
+                    c3ga::extractFlatPoint<double>(obj, flatPoint);
+                    if ((int)m_renderSettings.dualMode & (int)DualMode_Default)
+                        points.push_back({flatPoint[c3ga::E1], flatPoint[c3ga::E2], flatPoint[c3ga::E3]});
+                    break;
+                }
+                case c3ga::MvecType::DualFlatPoint: {
+                    c3ga::Mvec<double> flatPoint;
+                    c3ga::extractFlatPoint<double>(obj.dual(), flatPoint);
+                    if ((int)m_renderSettings.dualMode & (int)DualMode_Dual)
+                        points.push_back({flatPoint[c3ga::E1], flatPoint[c3ga::E2], flatPoint[c3ga::E3]});                    break;
                 }
 
                 // Spheres
                 case c3ga::MvecType::Sphere:
                 case c3ga::MvecType::ImaginarySphere: {
-                    if ((int)m_renderSettings.displayMode & (int)RenderSettings::DisplayMode::Default)
-                        spheres.push_back(extractDualSphereMatrix(obj.dual()));
+                    if ((int)m_renderSettings.dualMode & (int)DualMode_Default)
+                        spheres.push_back(c3ga::extractDualSphereMatrix(obj.dual()));
                     break;
                 }
 
-                case c3ga::MvecType::DualSphere:
+                case c3ga::MvecType::DualSphere:           
                 case c3ga::MvecType::ImaginaryDualSphere: {
-                    if ((int)m_renderSettings.displayMode & (int)RenderSettings::DisplayMode::Dual)
-                        spheres.push_back(extractDualSphereMatrix(obj));
+                    if ((int)m_renderSettings.dualMode & (int)DualMode_Dual)
+                        spheres.push_back(c3ga::extractDualSphereMatrix(obj));
                     break;
                 }
 
                 // Circles
-                case c3ga::MvecType::Circle:
-                case c3ga::MvecType::ImaginaryCircle: {
-                    if ((int)m_renderSettings.displayMode & (int)RenderSettings::DisplayMode::Default)
-                        circles.push_back(extractDualCircleMatrix(obj.dual()));
+                case c3ga::MvecType::Circle:             // == DualPairPoint   
+                case c3ga::MvecType::ImaginaryCircle: {  // == DualImaginaryPairPoint
+                    if ((int)m_renderSettings.dualMode & (int)DualMode_Default)
+                        circles.push_back(c3ga::extractDualCircleMatrix(obj.dual()));
+                    
+                    if ((int)m_renderSettings.dualMode & (int)DualMode_Dual)
+                        for (const auto& pt : c3ga::extractPairPoint(obj.dual()))
+                            points.push_back({pt[c3ga::E1], pt[c3ga::E2], pt[c3ga::E3]});
+
                     break;
                 }
-                case c3ga::MvecType::DualCircle:
-                case c3ga::MvecType::ImaginaryDualCircle: {
-                    if ((int)m_renderSettings.displayMode & (int)RenderSettings::DisplayMode::Dual)
-                        circles.push_back(extractDualCircleMatrix(obj));
+                case c3ga::MvecType::PairPoint:             // == DualCircle
+                case c3ga::MvecType::ImaginaryPairPoint: {  // == DualImaginaryCircle
+                    if ((int)m_renderSettings.dualMode & (int)DualMode_Default)
+                        for (const auto& pt : c3ga::extractPairPoint(obj))
+                            points.push_back({pt[c3ga::E1], pt[c3ga::E2], pt[c3ga::E3]});
+
+                    if ((int)m_renderSettings.dualMode & (int)DualMode_Dual)
+                        circles.push_back(c3ga::extractDualCircleMatrix(obj));
+
                     break;
                 }
 
                 // Planes
                 case c3ga::MvecType::Plane: {
-                    if ((int)m_renderSettings.displayMode & (int)RenderSettings::DisplayMode::Default)
-                        planes.push_back(extractDualPlaneMatrix(obj.dual()));
+                    if ((int)m_renderSettings.dualMode & (int)DualMode_Default)
+                        planes.push_back(c3ga::extractDualPlaneMatrix(obj.dual()));
                     break;
                 }
                 case c3ga::MvecType::DualPlane: {
-                    if ((int)m_renderSettings.displayMode & (int)RenderSettings::DisplayMode::Dual)
-                        planes.push_back(extractDualPlaneMatrix(obj));
+                    if ((int)m_renderSettings.dualMode & (int)DualMode_Dual)
+                        planes.push_back(c3ga::extractDualPlaneMatrix(obj));
                     break;
                 }
 
                 // Lines
                 case c3ga::MvecType::Line: {
-                    if ((int)m_renderSettings.displayMode & (int)RenderSettings::DisplayMode::Default)
-                        lines.push_back(extractDualLineMatrix(obj.dual()));
+                    if ((int)m_renderSettings.dualMode & (int)DualMode_Default)
+                        lines.push_back(c3ga::extractDualLineMatrix(obj.dual()));
                     break;
                 }
                 case c3ga::MvecType::DualLine: {
-                    if ((int)m_renderSettings.displayMode & (int)RenderSettings::DisplayMode::Dual)
-                        lines.push_back(extractDualLineMatrix(obj));
+                    if ((int)m_renderSettings.dualMode & (int)DualMode_Dual)
+                        lines.push_back(c3ga::extractDualLineMatrix(obj));
                     break;
                 }
             }

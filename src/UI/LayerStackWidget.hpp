@@ -3,7 +3,7 @@
 
 #include "LayerStack.hpp"
 
-#include "Renderer/Texture.h"
+#include "Renderer/Renderer.hpp"
 
 
 class LayerStackWidget
@@ -18,6 +18,7 @@ public:
     void DeleteSelectedLayers();
     void Clear();
 
+    inline bool IsHovered() const { return m_hovered; }
     bool Draw();
 
     LayerPtrArray &GetSelection();
@@ -25,11 +26,10 @@ public:
     void SelectLayer(const LayerPtr &layer);
     void DeselectLayer(const LayerPtr &layer);
     void ClearSelection();
+    LayerPtr GetLastSelectedLayer() const;
 
 private:
     bool DrawLayer(const LayerPtr& layer, const int& index);
-    bool DrawLayerTreeNode(const LayerPtr& layer, const int& index, bool& opened);
-    bool DrawLayerContent(const LayerPtr& layer);
     
     bool IsSource(const LayerPtr &layer);
     void UpdateSources();
@@ -39,8 +39,10 @@ private:
     LayerPtrArray m_sources;
 
     int m_lastIndex;
+    bool m_hovered;
 
     uint32_t m_renamedUUID; 
+    DualMode m_dualMode;
 };
 
 #endif

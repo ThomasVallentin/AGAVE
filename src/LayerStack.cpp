@@ -3,7 +3,12 @@
 #include "Base/Logging.h"
 
 
-LayerPtrArray LayerStack::GetLayers() const
+LayerPtr LayerStack::GetLayer(const uint32_t& index) const
+{
+    return m_layers[index];
+}
+
+const LayerPtrArray& LayerStack::GetLayers() const
 {
     return m_layers;
 }

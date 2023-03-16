@@ -1,7 +1,7 @@
 #ifndef RENDERER_H
 #define RENDERER_H
 
-#include "LayerStack.hpp"
+#include "Layer.hpp"
 
 #include "Mesh.h"
 #include "Shader.h"
@@ -9,18 +9,17 @@
 #include <c3ga/Mvec.hpp>
 
 
+enum DualMode
+{
+    DualMode_Default = 1 << 0,
+    DualMode_Dual    = 1 << 1,
+    DualMode_Both    = DualMode_Default | DualMode_Dual
+};
 
 struct RenderSettings
 {
-    enum class DisplayMode
-    {
-        Default = 1 << 0,
-        Dual    = 1 << 1,
-        Both    = Default | Dual
-    };
-
     float pointSize = 5.0f;
-    DisplayMode displayMode = DisplayMode::Default;
+    DualMode dualMode = DualMode_Default;
 };
 
 
@@ -34,7 +33,7 @@ public:
     inline const RenderSettings& GetRenderSettings() const { return m_renderSettings; }
 
     void Invalidate();
-    void Render(const LayerStackPtr& layerStack, 
+    void Render(const LayerPtrArray& layers, 
                 const glm::mat4& viewProjMatrix);
 
 private:
@@ -48,7 +47,7 @@ private:
         void Render() const;
     };
 
-    void BuildBatches(const LayerStackPtr& layerStack);
+    void BuildBatches(const LayerPtrArray& layers);
 
     Batch m_spheres;
     Batch m_planes;

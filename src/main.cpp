@@ -2,7 +2,7 @@
 #include "Samples.hpp"
 
 #include "UI/LayerStackWidget.hpp"
-#include "UI/Icons.hpp"
+#include "UI/ContentEditor.hpp"
 
 #include "Renderer/Shader.h"
 #include "Renderer/VertexArray.h"
@@ -32,6 +32,7 @@ int main(int argc, char* argv[])
     auto window = Window({1280, 720, "Particle System"});
     
     Camera camera(50.0f, 1280.0f / 720.0f, 0.1f, 10000.0f);
+    bool anyWindowHovered = false;
 
     auto eventCallback = [&](Event* event) {
         switch (event->GetType()) 
@@ -44,7 +45,8 @@ int main(int argc, char* argv[])
             }
         }
 
-        camera.OnEvent(event);
+        if (!anyWindowHovered)
+            camera.OnEvent(event);
     };
     window.SetEventCallback(eventCallback);
 
@@ -57,8 +59,10 @@ int main(int argc, char* argv[])
     Renderer renderer;
     RenderSettings& renderSettings = renderer.GetRenderSettings();
 
-    // Generate the content of the scene
+    // Initialize the UI widgets
     LayerStackWidget layerStackWid(layerStack);
+
+    std::vector<ContentEditor> contentEditors = {ContentEditor(layerStack)};
 
     double prevTime = window.GetTime();
     double currTime, deltaTime;
@@ -86,7 +90,7 @@ int main(int argc, char* argv[])
         if (somethingChanged) {
             renderer.Invalidate();
         }
-        renderer.Render(layerStack, camera.GetViewProjectionMatrix());
+        renderer.Render(layerStack->GetLayers(), camera.GetViewProjectionMatrix());
 
         // Reset the invalidation variable 
         somethingChanged = false;
@@ -95,6 +99,8 @@ int main(int argc, char* argv[])
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
+
+        anyWindowHovered = false;
 
         // We are using the ImGuiWindowFlags_NoDocking flag to make the parent window not dockable into,
         // because it would be confusing to have two docking targets within each others.
@@ -150,28 +156,33 @@ int main(int argc, char* argv[])
                     ImGui::EndMenu();
                 }
 
+                ImGui::SeparatorText("Editors");
+
+                if (ImGui::MenuItem("New Content Editor"))
+                    contentEditors.emplace_back(layerStack);
+
                 ImGui::EndMenu();
             }
 
             if (ImGui::BeginMenu("Display"))
             {
                 ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(4, 8));
-                ImGui::SeparatorText("Display Mode");
+                ImGui::SeparatorText("Dual Mode");
                 ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, -2));
                 ImGui::PushStyleVar(ImGuiStyleVar_ItemInnerSpacing, ImVec2(8, 8));
                 if (ImGui::RadioButton("Default##DisplayMenuDefault", 
-                                       renderSettings.displayMode == RenderSettings::DisplayMode::Default)){
-                    renderSettings.displayMode = RenderSettings::DisplayMode::Default;
+                                       renderSettings.dualMode == DualMode_Default)){
+                    renderSettings.dualMode = DualMode_Default;
                     somethingChanged = true;
                 }
                 if (ImGui::RadioButton("Dual##DisplayMenuDual",       
-                                       renderSettings.displayMode == RenderSettings::DisplayMode::Dual)){
-                    renderSettings.displayMode = RenderSettings::DisplayMode::Dual;
+                                       renderSettings.dualMode == DualMode_Dual)){
+                    renderSettings.dualMode = DualMode_Dual;
                     somethingChanged = true;
                 }
                 if (ImGui::RadioButton("Both##DisplayMenuBoth",       
-                                       renderSettings.displayMode == RenderSettings::DisplayMode::Both)){
-                    renderSettings.displayMode = RenderSettings::DisplayMode::Both;
+                                       renderSettings.dualMode == DualMode_Both)){
+                    renderSettings.dualMode = DualMode_Both;
                     somethingChanged = true;
                 }
                 ImGui::PopStyleVar(3);
@@ -189,7 +200,32 @@ int main(int argc, char* argv[])
 
         ImGui::End(); // Main Dockspace
         ImGui::ShowDemoWindow();
+
+        // Layer stack widget
         somethingChanged |= layerStackWid.Draw();
+        anyWindowHovered |= layerStackWid.IsHovered();
+
+        // Content editors
+        for (auto it = contentEditors.begin() ; it != contentEditors.end() ;)
+        {
+            auto& editor = *it;
+            if (editor.ShouldClose())
+            {
+                contentEditors.erase(it);
+                continue;
+            }
+
+            editor.SetDualMode(renderSettings.dualMode);
+            if (!editor.IsLocked())
+                editor.SetCurrentLayer(layerStackWid.GetLastSelectedLayer());
+
+            somethingChanged |= editor.Draw();
+            anyWindowHovered |= editor.IsHovered();
+
+            ++it;
+        }
+        
+        anyWindowHovered |= ImGui::IsAnyItemHovered();
 
         // // Render ImGui items
         ImGui::Render();
