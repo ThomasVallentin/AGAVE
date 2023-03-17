@@ -156,11 +156,6 @@ int main(int argc, char* argv[])
                     ImGui::EndMenu();
                 }
 
-                ImGui::SeparatorText("Editors");
-
-                if (ImGui::MenuItem("New Content Editor"))
-                    contentEditors.emplace_back(layerStack);
-
                 ImGui::EndMenu();
             }
 
@@ -188,6 +183,14 @@ int main(int argc, char* argv[])
                 ImGui::PopStyleVar(3);
 
                 ImGui::Spacing();
+
+                ImGui::EndMenu();
+            }
+
+            if (ImGui::BeginMenu("Editors"))
+            {
+                if (ImGui::MenuItem("New Content Editor"))
+                    contentEditors.emplace_back(layerStack);
 
                 ImGui::EndMenu();
             }

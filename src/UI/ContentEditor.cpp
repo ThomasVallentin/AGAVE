@@ -793,18 +793,26 @@ bool DrawProvider(const LayerPtr& layer, const LayerStackPtr& layerStack)
     return somethingChanged;
 }
 
+    
+void DrawLockButton(const char* identifier, bool& locked)
+{
+    ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 2.0f);
+    if (ImGui::CheckedIconButton(identifier, ICON_LOCK, ICON_UNLOCK, locked, IconSize::Small))
+        locked = !locked;
+}
 
 bool ContentEditor::Draw()
 {
     bool somethingChanged = false;
-    std::string identifier = std::string("Content Editor##") + std::to_string(m_id);
-    ImGui::Begin(identifier.c_str(), &m_opened);
-
+    std::string id = std::to_string(m_id);
+    ImGui::Begin((std::string("Content Editor##") + id).c_str(), &m_opened);
+    
     if (!m_layer)
     {
         ImVec2 textSize = ImVec2(ImGui::CalcTextSize(kEmptySelectionMessage));
         ImGui::SetCursorPos((ImGui::GetContentRegionAvail() - textSize) / 2.0f);
         ImGui::Text(kEmptySelectionMessage);
+        m_locked = false;
     }
     else
     {
@@ -812,16 +820,18 @@ bool ContentEditor::Draw()
         ImGui::Text("Layer : ");
         ImGui::SameLine();
         std::string layerName = m_layer->GetName();
-        identifier = std::string("##ContentEditorRenameLayer") + std::to_string(m_id);
-        if (ImGui::InputText(identifier.c_str(), &layerName))
+        if (ImGui::InputText((std::string("##ContentEditorRenameLayer") + id).c_str(), &layerName))
             m_layer->SetName(layerName);
+
+        ImGui::SameLine();
+        DrawLockButton((std::string("##ContentEditorLock") + id).c_str(), m_locked);
 
         ImGui::Spacing();
         ImGui::Separator();
         ImGui::Spacing();
         
         somethingChanged |= DrawProvider(m_layer, m_layerStack);
-        
+
         ImGui::Spacing();
         ImGui::Spacing();
         ImGui::Separator();
