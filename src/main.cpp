@@ -199,7 +199,7 @@ int main(int argc, char* argv[])
         }
 
         ImGui::End(); // Main Dockspace
-        ImGui::ShowDemoWindow();
+        // ImGui::ShowDemoWindow();
 
         // Layer stack widget
         somethingChanged |= layerStackWid.Draw();

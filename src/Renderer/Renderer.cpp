@@ -72,11 +72,15 @@ void Renderer::Render(const LayerPtrArray& layers,
     m_linesShader->Bind();
     m_linesShader->SetMat4("uViewProjMatrix", viewProjMatrix);
 
+    glEnable(GL_DEPTH_TEST);
+
     m_linesShader->SetVec4("uColor", {1, 1, 0, 1});
     m_circles.Render();
 
     m_linesShader->SetVec4("uColor", {1, 0, 1, 1});
     m_lines.Render();
+
+    glDisable(GL_DEPTH_TEST);
 
     m_linesShader->SetVec4("uColor", {0, 0, 1, 0.1});
     m_spheres.Render();
