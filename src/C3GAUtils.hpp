@@ -82,10 +82,44 @@ Mvec<T> randomVector()
     return vector(distrib(generator), distrib(generator), distrib(generator));
 }
 
+
+template <typename T>
+Mvec<T> dualPlane(const Mvec<T>& normal)
+{
+    return vector(normal[E1], normal[E2], normal[E3]) + ei<T>();
+}
+
+
+template <typename T>
+Mvec<T> dualCircle(const Mvec<T>& center, const Mvec<T>& direction, const T& radius)
+{		
+    auto pt1 = c3ga::point<T>(center[c3ga::E1] + direction[c3ga::E1] * radius, 
+                              center[c3ga::E2] + direction[c3ga::E2] * radius, 
+                              center[c3ga::E3] + direction[c3ga::E3] * radius);
+    auto pt2 = c3ga::point<T>(center[c3ga::E1] - direction[c3ga::E1] * radius, 
+                              center[c3ga::E2] - direction[c3ga::E2] * radius, 
+                              center[c3ga::E3] - direction[c3ga::E3] * radius);
+    return (pt1 ^ pt2);
+}
+
+
+template <typename T>
+struct Sandwich
+{
+    Mvec<T> mvec;
+    inline Mvec<T> operator()(const Mvec<T>& mv) const { return mvec * mv * mv.inv(); }
+};
+
 template <typename T>
 Mvec<T> translator(const Mvec<T>& translation)
 {		
     return 1.0 - 0.5 * translation * ei<T>();
+}
+
+template <typename T>
+Mvec<T> rotor(const T& theta, const Mvec<T>& dualPlane)
+{		
+    return std::cos(theta * 0.5) - dualPlane * std::sin(theta * 0.5);
 }
 
 
@@ -279,7 +313,7 @@ MvecType getTypeOf(Mvec<T> mv)
     return MvecType::Unknown;
 }
 
-inline std::string typeToName(const MvecType& type)
+inline std::string typeToName(const MvecType& type, const bool& stripImaginary=false, const bool& preferDual=false)
 {
     switch (type)
     {
@@ -293,7 +327,7 @@ inline std::string typeToName(const MvecType& type)
             return "DualSphere";
 
         case MvecType::ImaginaryDualSphere:
-            return "ImaginaryDualSphere";
+            return stripImaginary ? "DualSphere" : "ImaginaryDualSphere";
 
         case MvecType::DualPlane:
             return "DualPlane";
@@ -304,11 +338,17 @@ inline std::string typeToName(const MvecType& type)
         case MvecType::FlatPoint:
             return "FlatPoint";
 
+        case MvecType::Circle:
+            return preferDual ? (stripImaginary ? "DualPairPoint" : "ImaginaryDualPairPoint") : "Circle";
+
         case MvecType::DualCircle:
-            return "DualCircle";
+            return preferDual ? "DualCircle" : (stripImaginary ? "PairPoint" : "ImaginaryPairPoint");
 
         case MvecType::PairPoint:
-            return "PairPoint";
+            return preferDual ? (stripImaginary ? "DualCircle" : "ImaginaryDualCircle") : "PairPoint";
+
+        case MvecType::DualPairPoint:
+            return preferDual ? "DualPairPoint" : (stripImaginary ? "Circle" : "ImaginaryCircle");
 
         case MvecType::TangentVector:
             return "TangentVector";
@@ -318,12 +358,6 @@ inline std::string typeToName(const MvecType& type)
             
         case MvecType::DualFlatPoint:
             return "DualFlatPoint";
-
-        case MvecType::Circle:
-            return "Circle";
-
-        case MvecType::ImaginaryCircle:
-            return "ImaginaryCircle";
 
         case MvecType::TangentBivector:
             return "TangentBivector";
@@ -335,7 +369,7 @@ inline std::string typeToName(const MvecType& type)
             return "Sphere";
 
         case MvecType::ImaginarySphere:
-            return "ImaginarySphere";
+            return stripImaginary ? "Sphere" : "ImaginarySphere";
 
         case MvecType::Plane:
             return"Plane";
@@ -366,6 +400,8 @@ Mvec<T> convert(const Mvec<T>& mv, const MvecType& fromType, const MvecType& toT
     {
         case MvecType::Point: 
         case MvecType::Sphere: 
+        case MvecType::Circle:
+        case MvecType::PairPoint:
         case MvecType::DualSphere: {
             break;
         }
@@ -374,35 +410,35 @@ Mvec<T> convert(const Mvec<T>& mv, const MvecType& fromType, const MvecType& toT
             return result;
     }
 
-    Mvec<T> center, direction;
+    Mvec<T> pt1, direction, pt2;
     T radius;
     switch (fromType)
     {
         case MvecType::Point: {
-            center = mv;
+            pt1 = mv;
             radius = 1.0;
             break;
         }
 
         case MvecType::Sphere: 
         case MvecType::ImaginarySphere: {
-            radiusAndCenterFromDualSphere(mv.dual(), radius, center);
+            radiusAndCenterFromDualSphere(mv.dual(), radius, pt1);
             break;
         }
         case MvecType::DualSphere: 
         case MvecType::ImaginaryDualSphere: {
-            radiusAndCenterFromDualSphere(mv, radius, center);
+            radiusAndCenterFromDualSphere(mv, radius, pt1);
             break;
         }
 
         case MvecType::Circle: 
         case MvecType::ImaginaryCircle: {
-            extractDualCircle(mv.dual(), radius, center, direction);
+            extractDualCircle(mv.dual(), radius, pt1, direction);
             break;
         }
-        case MvecType::DualCircle: 
-        case MvecType::ImaginaryDualCircle: {
-            extractDualCircle(mv, radius, center, direction);
+        case MvecType::PairPoint: 
+        case MvecType::ImaginaryPairPoint: {
+            extractDualCircle(mv, radius, pt1, direction);
             break;
         }
 
@@ -413,13 +449,15 @@ Mvec<T> convert(const Mvec<T>& mv, const MvecType& fromType, const MvecType& toT
     switch (toType)
     {
         case MvecType::Point: {
-            return point(center[E1], center[E2], center[E3]);
+            return point(pt1[E1], pt1[E2], pt1[E3]);
         }
         case MvecType::Sphere: {
-            return dualSphere<T>(center[E1], center[E2], center[E3], radius).dual();
+            return dualSphere<T>(pt1[E1], pt1[E2], pt1[E3], radius).dual();
         }
         case MvecType::DualSphere: {
-            return dualSphere<T>(center[E1], center[E2], center[E3], radius);
+            return dualSphere<T>(pt1[E1], pt1[E2], pt1[E3], radius);
+        } case MvecType::PairPoint: {
+            return pt1 ^ (pt2.isEmpty() ? pt1 : pt2);
         }
 
         default:

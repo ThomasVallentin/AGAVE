@@ -24,26 +24,7 @@ static const c3ga::MvecType mvecTypes[] = {
     c3ga::MvecType::Circle,     // = DualPairPoint
     c3ga::MvecType::PairPoint   // = DualCircle
     };
-static const char* defaultTypeNames[] = {
-    "Point",
-    "Sphere",
-    "DualSphere",
-    "Plane",
-    "DualPlane",
-    "Line",
-    "DualLine",
-    "Circle",
-    "PairPoint"};
-static const char* dualTypeNames[] = {
-    "Point",
-    "Sphere",
-    "DualSphere",
-    "Plane",
-    "DualPlane",
-    "Line",
-    "DualLine",
-    "DualPairPoint",   
-    "DualCircle"};
+
 
 static uint32_t contentEditorIdCounter = 0;
 
@@ -172,7 +153,7 @@ bool DrawOperatorComboBox(const LayerPtr& layer, const std::shared_ptr<OperatorB
 
 // == RandomGenerator ==
 
-bool DrawRandomGenerator(const LayerPtr& layer)
+bool DrawRandomGenerator(const LayerPtr& layer, const DualMode& dualMode)
 {
     bool somethingChanged = false;
     auto provider = std::dynamic_pointer_cast<RandomGenerator>(layer->GetProvider());
@@ -187,7 +168,7 @@ bool DrawRandomGenerator(const LayerPtr& layer)
                                "DualSphere"};
 
     c3ga::MvecType objType = provider->GetObjectType();
-    const char* objTypeName = c3ga::typeToName(objType).c_str();
+    const char* objTypeName = c3ga::typeToName(objType, true, !(dualMode & DualMode_Default)).c_str();
 
     ImGui::AlignTextToFramePadding();
     ImGui::Text("Type :");
@@ -408,7 +389,7 @@ bool DrawPointControl(const std::string& identifier, c3ga::Mvec<double>& point, 
     return somethingChanged;
 }
 
-bool DrawDualToLineControl(const std::string& identifier, c3ga::Mvec<double>& dualLine, const float& sensitivity=0.05f, const float& width=100.0f) 
+bool DrawDualLineToLineControl(const std::string& identifier, c3ga::Mvec<double>& dualLine, const float& sensitivity=0.05f, const float& width=100.0f) 
 {
     bool somethingChanged = false;
     c3ga::Mvec<double> origin, direction;
@@ -434,6 +415,71 @@ bool DrawDualToLineControl(const std::string& identifier, c3ga::Mvec<double>& du
 
     return somethingChanged;
 }
+
+bool DrawDualCircleControl(const std::string& identifier, c3ga::Mvec<double>& dualCircle, const float& sensitivity=0.05f, const float& width=100.0f) 
+{
+    bool somethingChanged = false;
+    double r;
+    c3ga::Mvec<double> center, direction;
+    c3ga::extractDualCircle(dualCircle, r, center, direction);
+
+    float spacing = ImGui::GetStyle().ItemSpacing.x;
+    float textWidth = ImGui::CalcTextSize("Center:").x;
+    float indent = ImGui::GetCursorPosX() + textWidth;
+    float remainingWidth = width - textWidth - spacing;
+
+    // Center
+    ImGui::Text("Center:");
+    ImGui::SameLine();
+    somethingChanged |= DrawPointControl(identifier + "Pos", center, sensitivity, remainingWidth * 0.75f);
+
+    // Radius
+    ImGui::SameLine();
+    float radius = (float)r;
+    somethingChanged |= DrawDragControl("R", (std::string("##DualCircleControlRadius") + identifier).c_str(), 
+                                        &radius, 
+                                        ImVec4(0.3, 0.3, 0.3, 1.0),
+                                        sensitivity,
+                                        remainingWidth * 0.25f);
+    
+    // Direction
+    ImGui::SetCursorPosX(indent - ImGui::CalcTextSize("Dir:").x);
+    ImGui::Text("Dir:");
+    ImGui::SameLine();
+    somethingChanged |= DrawVectorControl(identifier + "Dir", direction, sensitivity, remainingWidth);
+
+    if (somethingChanged)
+    {
+        r = radius == 0 ? 1e-6 : (double)radius;  // Avoid degenerate mvecs when radius is zero.
+        direction = direction.norm() == 0 ? c3ga::vector<double>(0, 1, 0) : direction;
+        dualCircle = c3ga::dualCircle(center, direction / direction.norm(), r);
+    }
+
+    return somethingChanged;
+}
+
+bool DrawPairPointControl(const std::string& identifier, c3ga::Mvec<double>& pairPoint, const float& sensitivity=0.05f, const float& width=100.0f) 
+{
+    bool somethingChanged = false;
+    c3ga::Mvec<double> p1, p2;
+    c3ga::extractPairPoint(pairPoint, p1, p2);
+
+    float indent = ImGui::GetCursorPosX();
+
+    // Point 1
+    somethingChanged |= DrawPointControl(identifier + "Point1", p1, sensitivity, width);
+
+    // Point 2
+    ImGui::SetCursorPosX(indent);
+    somethingChanged |= DrawPointControl(identifier + "Point2", p2, sensitivity, width);
+
+    if (somethingChanged)
+        pairPoint = p1 ^ p2;
+
+    return somethingChanged;
+}
+
+
 
 bool DrawDualPlaneControl(const std::string& identifier, c3ga::Mvec<double>& dualPlane, const float& sensitivity=0.05f, const float& width=100.0f) 
 {
@@ -548,7 +594,7 @@ bool DrawDualSphereControl(const std::string& identifier, c3ga::Mvec<double>& du
 bool DrawLayerContent(const LayerPtr& layer, const DualMode& dualMode) 
 {
     bool somethingChanged = false;
-    const char** typeNames = (dualMode & DualMode_Default) ? defaultTypeNames : dualTypeNames;
+    bool preferDual = !(dualMode & DualMode_Default);
 
     auto& objects = layer->GetObjects();
     auto provider = layer->GetProvider();
@@ -559,7 +605,7 @@ bool DrawLayerContent(const LayerPtr& layer, const DualMode& dualMode)
     {
         auto& obj = objects[index];
         c3ga::MvecType objType = c3ga::getTypeOf(obj);
-        std::string objTypeName = c3ga::typeToName(objType);
+        std::string objTypeName = c3ga::typeToName(objType, true, preferDual);
 
         // Type combo box
         std::string identifier = std::to_string(layer->GetUUID()) + std::to_string(index);
@@ -569,7 +615,7 @@ bool DrawLayerContent(const LayerPtr& layer, const DualMode& dualMode)
             for (size_t i=0 ; i < IM_ARRAYSIZE(mvecTypes) ; i++)
             {
                 bool selected = objType == mvecTypes[i];
-                if (ImGui::Selectable(typeNames[i], selected) && !selected) {
+                if (ImGui::Selectable(c3ga::typeToName(mvecTypes[i], true, preferDual).c_str(), selected) && !selected) {
                     obj = convert(obj, objType, mvecTypes[i]);
                     objType = mvecTypes[i];
                     somethingChanged = true;
@@ -633,7 +679,7 @@ bool DrawLayerContent(const LayerPtr& layer, const DualMode& dualMode)
             case c3ga::MvecType::Line: {
                 auto dualLine = obj.dual();
                 ImGui::SameLine();
-                if (DrawDualToLineControl(identifier, dualLine, sensitivity, availableWidth)) {
+                if (DrawDualLineToLineControl(identifier, dualLine, sensitivity, availableWidth)) {
                     somethingChanged = true;
                     obj = dualLine;
                 }
@@ -645,13 +691,59 @@ bool DrawLayerContent(const LayerPtr& layer, const DualMode& dualMode)
 
             case c3ga::MvecType::DualLine: {
                 ImGui::SameLine();
-                if (DrawDualToLineControl(identifier, obj, sensitivity, availableWidth)) {
+                if (DrawDualLineToLineControl(identifier, obj, sensitivity, availableWidth)) {
                     somethingChanged = true;
                     obj = obj.dual();
                 }
 
                 removeButtonOffset = ImVec2(0.0f, -9.0f);
 
+                break;
+            }
+
+            case c3ga::MvecType::Circle:
+            case c3ga::MvecType::ImaginaryCircle: {
+                if (preferDual)
+                {
+                    // Dual pair point control
+                    auto pairPoint = obj.dual();
+                    ImGui::SameLine();
+                    if(DrawPairPointControl(identifier, obj, sensitivity, availableWidth))
+                    {
+                        somethingChanged = true;
+                        obj = pairPoint.dual();
+                    }
+                }
+                else 
+                {
+                    // Display circle control
+                    auto dualCircle = -obj.dual();
+                    ImGui::SameLine();
+                    if (DrawDualCircleControl(identifier, dualCircle, sensitivity, availableWidth)) 
+                    {
+                        somethingChanged = true;
+                        obj = dualCircle.dual();
+                    }
+                }
+                removeButtonOffset = ImVec2(0.0f, -9.0f);
+                break;
+            }
+
+            case c3ga::MvecType::PairPoint:
+            case c3ga::MvecType::ImaginaryPairPoint: {
+                if (preferDual)
+                {
+                    // Display dual circle control
+                    ImGui::SameLine();
+                    somethingChanged |= DrawDualCircleControl(identifier, obj, sensitivity, availableWidth);
+                }
+                else
+                {
+                    // Display pair point control
+                    ImGui::SameLine();
+                    somethingChanged |= DrawPairPointControl(identifier, obj, sensitivity, availableWidth);
+                }
+                removeButtonOffset = ImVec2(0.0f, -9.0f);
                 break;
             }
         }
@@ -691,7 +783,7 @@ bool DrawLayerContent(const LayerPtr& layer, const DualMode& dualMode)
 
 // == Provider ==
 
-bool DrawProvider(const LayerPtr& layer, const LayerStackPtr& layerStack) 
+bool DrawProvider(const LayerPtr& layer, const LayerStackPtr& layerStack, const DualMode& dualMode) 
 {
     const auto& layers = layerStack->GetLayers();
     auto sources = layer->GetSources();
@@ -716,7 +808,7 @@ bool DrawProvider(const LayerPtr& layer, const LayerStackPtr& layerStack)
             }
 
             case ProviderType_RandomGenerator: {
-                somethingChanged |= DrawRandomGenerator(layer);
+                somethingChanged |= DrawRandomGenerator(layer, dualMode);
                 break;
             }
 
@@ -830,7 +922,7 @@ bool ContentEditor::Draw()
         ImGui::Separator();
         ImGui::Spacing();
         
-        somethingChanged |= DrawProvider(m_layer, m_layerStack);
+        somethingChanged |= DrawProvider(m_layer, m_layerStack, m_dualMode);
 
         ImGui::Spacing();
         ImGui::Spacing();

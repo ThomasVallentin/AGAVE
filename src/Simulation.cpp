@@ -24,8 +24,7 @@ SimulationEngine& SimulationEngine::Init()
     return *s_instance;
 }
 
-SimulationEngine::SimulationEngine() :
-    m_forces({})
+SimulationEngine::SimulationEngine()
 {
     std::uniform_int_distribution<uint32_t> dist(1, UINT32_MAX);
     m_lastUUID = dist(uuidGenerator);
@@ -57,52 +56,8 @@ void SimulationEngine::RemoveSimulation(const SimulationHandle& handle)
 void SimulationEngine::Update(const double &deltaTime)
 {
     for (auto& simulation : m_simulations)
-    {
-        for (auto& obj : simulation.second) {
-            for (auto& force : m_forces) {
-                force(obj);
-            }
-
+        for (auto& obj : simulation.second) 
             obj.Update(deltaTime);
-            // ComputeIntersections(obj);
-            // obj.position = c3ga::point(obj.position[c3ga::E1], 
-            //                            obj.position[c3ga::E2], 
-            //                            obj.position[c3ga::E3]);
-        }
-    }
-}
-
-void SimulationEngine::ComputeIntersections(SimObject &object)
-{
-    if (object.object[c3ga::E1] < -1.1f) {
-        object.object[c3ga::E1] = -1.1f;
-        object.velocity[c3ga::E1] *= -1.0f;
-    }
-    else 
-    if (object.object[c3ga::E1] > 1.1f) {
-        object.object[c3ga::E1] = 1.1f;
-        object.velocity[c3ga::E1] *= -1.0f;
-    }
-
-    if (object.object[c3ga::E2] < -1.1f) {
-        object.object[c3ga::E2] = -1.1f;
-        object.velocity[c3ga::E2] *= -1.0f;
-    }
-    else 
-    if (object.object[c3ga::E2] > 1.1f) {
-        object.object[c3ga::E2] = 1.1f;
-        object.velocity[c3ga::E2] *= -1.0f;
-    }
-
-    if (object.object[c3ga::E3] < -1.1f) {
-        object.object[c3ga::E3] = -1.1f;
-        object.velocity[c3ga::E3] *= -1.0f;
-    }
-    else 
-    if (object.object[c3ga::E3] > 1.1f) {
-        object.object[c3ga::E3] = 1.1f;
-        object.velocity[c3ga::E3] *= -1.0f;
-    }
 }
 
 SimObjectArray& SimulationEngine::GetSimObjects(const SimulationHandle& handle)
@@ -141,6 +96,10 @@ void SimulationHandle::SetObjects(const MvecArray& objects)
     {
         simObj.object = objects[i];
         simObj.velocity = c3ga::randomVector<double>();
+        auto v1 = c3ga::randomVector<double>();
+        auto v2 = c3ga::randomVector<double>();
+        simObj.rotationPlane = v1 ^ v2;
+        simObj.rotationPlane /= simObj.rotationPlane.norm();  
         ++i;
     }
 }
@@ -148,9 +107,10 @@ void SimulationHandle::SetObjects(const MvecArray& objects)
 
 void SimObject::Update(const double& deltaTime)
 {
-    auto translator = c3ga::translator(velocity * deltaTime);
-    object = translator * object * translator.inv();
+    auto rotor = c3ga::rotor(deltaTime, rotationPlane);
+    // auto translator = c3ga::translator(velocity * deltaTime);
+    object = rotor * object * rotor.inv();
+
     // Rounding to make sure precision issues don't mess up the rest of the program
     object.roundZero(1e-6);  
-    accumulatedForces = c3ga::Mvec<double>(0);
 }

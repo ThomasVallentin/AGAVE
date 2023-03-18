@@ -5,6 +5,7 @@
 
 #include <c3ga/Mvec.hpp>
 #include <c3gaTools.hpp>
+#include <C3GAUtils.hpp>
 
 #include <unordered_map>
 #include <vector>
@@ -13,20 +14,14 @@ struct SimObject
 {
     c3ga::Mvec<double> object;
     c3ga::Mvec<double> velocity;
-    c3ga::Mvec<double> accumulatedForces;
+    c3ga::Mvec<double> rotationPlane;
+    double rotationSpeed;
 
     void Update(const double& deltaTime);
 };
 
 using SimObjectArray = std::vector<SimObject>;
 
-using Force = std::function<void(SimObject&)>;
-
-inline Force LinearForce(c3ga::Mvec<double> force) {
-    return [force](SimObject& object) {
-        object.accumulatedForces += force;
-    };
-}
 
 class SimulationEngine;
 
@@ -68,15 +63,12 @@ private:
     SimObjectArray& GetSimObjects(const SimulationHandle& handle);
     const SimObjectArray& GetSimObjects(const SimulationHandle& handle) const;
 
-    void ComputeIntersections(SimObject& object);
-
     SimulationEngine();
     ~SimulationEngine();
 
     static SimulationEngine* s_instance;
 
     std::unordered_map<uint32_t, SimObjectArray> m_simulations;
-    std::vector<Force> m_forces;
 
     uint32_t m_lastUUID;
 };
