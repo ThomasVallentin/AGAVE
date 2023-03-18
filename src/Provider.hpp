@@ -115,10 +115,14 @@ public:
     OperatorBasedProvider(const Operator& op=Operators::OuterProduct) : m_op(op) {}
 
     inline Operator GetOperator() const { return m_op; }
-    void SetOperator(const Operator& op);
+    inline void SetOperator(const Operator& op) { m_op = op; }
+
+    inline bool GetProductWithEi() const { return m_productWithEi; }
+    inline void SetProductWithEi(const bool& productWithEi) { m_productWithEi = productWithEi; }
 
 private:
     Operator m_op;
+    bool m_productWithEi = false;
 };
 
 

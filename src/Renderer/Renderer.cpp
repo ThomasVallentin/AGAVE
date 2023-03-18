@@ -125,7 +125,8 @@ void Renderer::BuildBatches(const LayerPtrArray& layers)
                     c3ga::Mvec<double> flatPoint;
                     c3ga::extractFlatPoint<double>(obj.dual(), flatPoint);
                     if ((int)m_renderSettings.dualMode & (int)DualMode_Dual)
-                        points.push_back({flatPoint[c3ga::E1], flatPoint[c3ga::E2], flatPoint[c3ga::E3]});                    break;
+                        points.push_back({flatPoint[c3ga::E1], flatPoint[c3ga::E2], flatPoint[c3ga::E3]});
+                    break;
                 }
 
                 // Spheres
@@ -150,16 +151,23 @@ void Renderer::BuildBatches(const LayerPtrArray& layers)
                         circles.push_back(c3ga::extractDualCircleMatrix(obj.dual()));
                     
                     if ((int)m_renderSettings.dualMode & (int)DualMode_Dual)
-                        for (const auto& pt : c3ga::extractPairPoint(obj.dual()))
-                            points.push_back({pt[c3ga::E1], pt[c3ga::E2], pt[c3ga::E3]});
-
+                    {
+                        c3ga::Mvec<double> pt1, pt2;
+                        c3ga::extractPairPoint(obj.dual(), pt1, pt2);
+                        points.push_back({pt1[c3ga::E1], pt1[c3ga::E2], pt1[c3ga::E3]});
+                        points.push_back({pt2[c3ga::E1], pt2[c3ga::E2], pt2[c3ga::E3]});
+                    }
                     break;
                 }
                 case c3ga::MvecType::PairPoint:             // == DualCircle
                 case c3ga::MvecType::ImaginaryPairPoint: {  // == DualImaginaryCircle
                     if ((int)m_renderSettings.dualMode & (int)DualMode_Default)
-                        for (const auto& pt : c3ga::extractPairPoint(obj))
-                            points.push_back({pt[c3ga::E1], pt[c3ga::E2], pt[c3ga::E3]});
+                    {
+                        c3ga::Mvec<double> pt1, pt2;
+                        c3ga::extractPairPoint(obj, pt1, pt2);
+                        points.push_back({pt1[c3ga::E1], pt1[c3ga::E2], pt1[c3ga::E3]});
+                        points.push_back({pt2[c3ga::E1], pt2[c3ga::E2], pt2[c3ga::E3]});
+                    }
 
                     if ((int)m_renderSettings.dualMode & (int)DualMode_Dual)
                         circles.push_back(c3ga::extractDualCircleMatrix(obj));
@@ -195,34 +203,34 @@ void Renderer::BuildBatches(const LayerPtrArray& layers)
     }
 
     m_pointCount = points.size();
-    // LOG_INFO("point count %d", m_pointCount);
+    LOG_DEBUG("Renderer: Point count %d", m_pointCount);
     auto vbo = m_points->GetVertexBuffers()[0];
     vbo->Bind();
     vbo->SetData(points.data(), m_pointCount * sizeof(glm::vec3));
 
     m_spheres.instanceCount = spheres.size();
-    // LOG_INFO("sphere count %d", m_spheres.instanceCount);
+    LOG_DEBUG("Renderer: Sphere count %d", m_spheres.instanceCount);
     vbo = m_spheres.vertexArray->GetVertexBuffers()[1];
     vbo->Bind();
     vbo->SetData(spheres.data(), m_spheres.instanceCount * sizeof(glm::mat4));
     vbo->Unbind();
 
     m_circles.instanceCount = circles.size();
-    // LOG_INFO("circle count %d", m_circles.instanceCount);
+    LOG_DEBUG("Renderer: Circle count %d", m_circles.instanceCount);
     vbo = m_circles.vertexArray->GetVertexBuffers()[1];
     vbo->Bind();
     vbo->SetData(circles.data(), m_circles.instanceCount * sizeof(glm::mat4));
     vbo->Unbind();
 
     m_planes.instanceCount = planes.size();
-    // LOG_INFO("sphere count %d", m_planes.instanceCount);
+    LOG_DEBUG("Renderer: Sphere count %d", m_planes.instanceCount);
     vbo = m_planes.vertexArray->GetVertexBuffers()[1];
     vbo->Bind();
     vbo->SetData(planes.data(), m_planes.instanceCount * sizeof(glm::mat4));
     vbo->Unbind();
 
     m_lines.instanceCount = lines.size();
-    // LOG_INFO("sphere count %d", m_lines.instanceCount);
+    LOG_DEBUG("Renderer: Lines count %d", m_lines.instanceCount);
     vbo = m_lines.vertexArray->GetVertexBuffers()[1];
     vbo->Bind();
     vbo->SetData(lines.data(), m_lines.instanceCount * sizeof(glm::mat4));

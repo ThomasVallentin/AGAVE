@@ -400,6 +400,8 @@ Mvec<T> convert(const Mvec<T>& mv, const MvecType& fromType, const MvecType& toT
     {
         case MvecType::Point: 
         case MvecType::Sphere: 
+        case MvecType::Plane: 
+        case MvecType::DualPlane: 
         case MvecType::Circle:
         case MvecType::PairPoint:
         case MvecType::DualSphere: {
@@ -407,44 +409,58 @@ Mvec<T> convert(const Mvec<T>& mv, const MvecType& fromType, const MvecType& toT
         }
 
         default:
-            return result;
+            return mv;
     }
 
-    Mvec<T> pt1, direction, pt2;
-    T radius;
+    Mvec<T> center, pt1, direction, pt2;
+    T radius = 1.0;
     switch (fromType)
     {
         case MvecType::Point: {
             pt1 = mv;
-            radius = 1.0;
             break;
         }
 
         case MvecType::Sphere: 
         case MvecType::ImaginarySphere: {
-            radiusAndCenterFromDualSphere(mv.dual(), radius, pt1);
+            radiusAndCenterFromDualSphere(mv.dual(), radius, center);
             break;
         }
         case MvecType::DualSphere: 
         case MvecType::ImaginaryDualSphere: {
-            radiusAndCenterFromDualSphere(mv, radius, pt1);
+            radiusAndCenterFromDualSphere(mv, radius, center);
             break;
         }
-
         case MvecType::Circle: 
         case MvecType::ImaginaryCircle: {
-            extractDualCircle(mv.dual(), radius, pt1, direction);
+            extractDualCircle(mv.dual(), radius, center, direction);
+            extractPairPoint(mv.dual(), pt1, pt2);
             break;
         }
         case MvecType::PairPoint: 
         case MvecType::ImaginaryPairPoint: {
+            extractPairPoint(mv, pt1, pt2);
             extractDualCircle(mv, radius, pt1, direction);
+            break;
+        }
+        case MvecType::Plane: {
+            originAndDirectionFromDualPlane(mv.dual(), center, direction);
+            break;
+        }
+        case MvecType::DualPlane: {
+            originAndDirectionFromDualPlane(mv, center, direction);
             break;
         }
 
         default:
             return result;
     }
+
+    // Make sure we have enough data to work with
+    if (direction.isEmpty())
+        direction = vector<double>(0, 1, 0);
+    if (center.isEmpty())
+        center = point<double>(0, 0, 0);
 
     switch (toType)
     {
@@ -456,8 +472,18 @@ Mvec<T> convert(const Mvec<T>& mv, const MvecType& fromType, const MvecType& toT
         }
         case MvecType::DualSphere: {
             return dualSphere<T>(pt1[E1], pt1[E2], pt1[E3], radius);
-        } case MvecType::PairPoint: {
-            return pt1 ^ (pt2.isEmpty() ? pt1 : pt2);
+        }
+        case MvecType::Plane: {
+            return dualPlane<T>(direction).dual();
+        }
+        case MvecType::DualPlane: {
+            return dualPlane<T>(direction);
+        } 
+        case MvecType::PairPoint: {
+            if (!pt1.isEmpty())
+                return pt1 ^ pt2;
+            else 
+                point(center - direction) ^ point(center + direction);
         }
 
         default:
@@ -488,6 +514,31 @@ void originAndDirectionFromDualLine(const Mvec<T>& dualLine, Mvec<T>& origin, Mv
     origin = point(origin[E23], -origin[E13], origin[E12]);
 }
 
+template <typename T>
+void originAndDirectionFromDualPlane(const Mvec<T>& dualPlane, Mvec<T>& origin, Mvec<T>& direction)
+{
+    T a = dualPlane[E1], b = dualPlane[E2], c = dualPlane[E3], d = dualPlane[Ei];
+    direction = vector<double>(a, b, c);
+    
+    // We pin the plane to x=0 and z=0. In that way ax+by+cz+d=0 gives y=d/b
+    if (b != 0)
+    {
+        origin = point<double>(0, d / b, 0);
+    } 
+    else if (a != 0)
+    {
+        origin = point<double>(d / a, 0, 0);
+    } 
+    else if (c != 0)
+    {
+        origin = point<double>(0, 0, d / c);
+    }
+    else 
+    {
+        origin = point<double>(0, 0, 0);
+    }
+    
+}
 
 // == Matrix extraction functions ==
 
@@ -532,14 +583,13 @@ glm::mat4 extractDualLineMatrix(const Mvec<T>& dualLine)
 template <typename T>
 glm::mat4 extractDualPlaneMatrix(const Mvec<T>& dualPlane)
 {
-    T a = dualPlane[E1], b = dualPlane[E2], c = dualPlane[E3], d = dualPlane[Ei];
-    glm::vec3 normal = glm::normalize(glm::vec3(a, b, c));
+    Mvec<T> origin, direction;
+    originAndDirectionFromDualPlane(dualPlane, origin, direction);
+
+    glm::vec3 normal = glm::normalize(glm::vec3(direction[E1], direction[E2], direction[E3]));
     glm::mat4 r = glm::toMat4(glm::quat{glm::vec3(0, 1, 0), normal});
     
-    // We pin the plane to x=0 and z=0. In that way ax+by+cz+d=0 gives y=d/b
-    float y = b != 0 ? (d / b) : 0.0f;
-
-    return glm::translate(glm::mat4(1.0f), {0.0f, y, 0.0f}) * r;
+    return glm::translate(glm::mat4(1.0f), {origin[E1], origin[E2], origin[E3]}) * r;
 }
 
 

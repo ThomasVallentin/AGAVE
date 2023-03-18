@@ -209,20 +209,40 @@ bool LayerStackWidget::Draw()
         if (ImGui::BeginMenu("Create"))
         {
             if (ImGui::MenuItem("Layer"))
-                m_layerStack->NewLayer("Layer", {});
-
+            {
+                auto lyr = m_layerStack->NewLayer("Layer", {});
+                ClearSelection();
+                SelectLayer(lyr);
+                m_lastIndex = m_layerStack->GetLayers().size() - 1;
+            }
             if (ImGui::MenuItem("Random generator"))
-                m_layerStack->NewRandomGenerator("Layer");
-
+            {
+                auto lyr = m_layerStack->NewRandomGenerator("Random Generator");
+                ClearSelection();
+                SelectLayer(lyr);
+                m_lastIndex = m_layerStack->GetLayers().size() - 1;
+            }
             if (ImGui::MenuItem("Subset", "", nullptr, m_selection.size() >= 1))
-                m_layerStack->NewSubset("Layer", m_selection.back());
-
+            {
+                auto lyr = m_layerStack->NewSubset("Subset", m_selection.back());
+                ClearSelection();
+                SelectLayer(lyr);
+                m_lastIndex = m_layerStack->GetLayers().size() - 1;
+            }
             if (ImGui::MenuItem("SelfCombination", "", nullptr, m_selection.size() >= 1))
-                m_layerStack->NewSelfCombination("Layer", m_selection.back());
-
+            {
+                auto lyr = m_layerStack->NewSelfCombination("SelfCombination", m_selection.back());
+                ClearSelection();
+                SelectLayer(lyr);
+                m_lastIndex = m_layerStack->GetLayers().size() - 1;
+            }
             if (ImGui::MenuItem("Combination", "", nullptr, m_selection.size() >= 2))
-                m_layerStack->NewCombination("Layer", m_selection[m_selection.size() - 2], m_selection.back());
-
+            {
+                auto lyr = m_layerStack->NewCombination("Combination", m_selection[m_selection.size() - 2], m_selection.back());
+                ClearSelection();
+                SelectLayer(lyr);
+                m_lastIndex = m_layerStack->GetLayers().size() - 1;
+            }
             ImGui::EndMenu();
         }
 

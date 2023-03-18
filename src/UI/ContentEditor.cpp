@@ -162,10 +162,20 @@ bool DrawRandomGenerator(const LayerPtr& layer, const DualMode& dualMode)
     // ObjectType combo box
     c3ga::MvecType types[] = {c3ga::MvecType::Point,
                               c3ga::MvecType::Sphere,
-                              c3ga::MvecType::DualSphere};
+                              c3ga::MvecType::DualSphere,
+                              c3ga::MvecType::Plane,
+                              c3ga::MvecType::DualPlane,
+                              c3ga::MvecType::PairPoint,
+                              c3ga::MvecType::DualPairPoint,
+                              };
     const char* typeNames[] = {"Point",
                                "Sphere",
-                               "DualSphere"};
+                               "DualSphere",
+                               "Plane",
+                               "DualPlane",
+                               "PairPoint",
+                               "DualPairPoint",
+                               };
 
     c3ga::MvecType objType = provider->GetObjectType();
     const char* objTypeName = c3ga::typeToName(objType, true, !(dualMode & DualMode_Default)).c_str();
@@ -245,6 +255,7 @@ bool DrawSubsetProvider(const LayerPtr& layer)
 
 bool DrawSelfCombinationProvider(const LayerPtr& layer)
 {
+    bool somethingChanged = false;
     auto provider = std::dynamic_pointer_cast<SelfCombination>(layer->GetProvider());
     int count = provider->GetCount();
     int dimension = provider->GetDimension();
@@ -257,7 +268,7 @@ bool DrawSelfCombinationProvider(const LayerPtr& layer)
     {
         provider->SetCount(count);
         layer->SetDirty(DirtyBits_Provider);
-        return true;
+        somethingChanged = true;
     }
 
     ImGui::AlignTextToFramePadding();
@@ -268,10 +279,22 @@ bool DrawSelfCombinationProvider(const LayerPtr& layer)
     {
         provider->SetDimension(dimension);
         layer->SetDirty(DirtyBits_Provider);
-        return true;
+        somethingChanged = true;
     }
 
-    return false;
+    auto prodWithEi = provider->GetProductWithEi();
+    ImGui::AlignTextToFramePadding();
+    ImGui::Text("Last product with E∞ :");
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(75);
+    if (ImGui::Checkbox((std::string("##SelfCombinationEi") + std::to_string(layer->GetUUID())).c_str(), &prodWithEi))
+    {
+        provider->SetProductWithEi(prodWithEi);
+        layer->SetDirty(DirtyBits_Provider);
+        somethingChanged = true;
+    }
+
+    return somethingChanged;
 }
  
 
@@ -280,12 +303,12 @@ bool DrawSelfCombinationProvider(const LayerPtr& layer)
 bool DrawSource(const LayerPtrArray& layers, const LayerPtr& currentLayer, LayerWeakPtr& source, int index)
 {
     LayerPtr src = source.lock();
-    const char* currentName = src ? src->GetName().c_str() : ""; 
+    std::string currentName = src ? src->GetName().c_str() : ""; 
     const char* identifier = (std::to_string(currentLayer->GetUUID()) + std::to_string(index)).c_str();
 
     bool somethingChanged = false;
     ImGui::SetNextItemWidth(150.0f);
-    if (ImGui::BeginCombo((std::string("##SourceCombo") + identifier).c_str(), currentName))
+    if (ImGui::BeginCombo((std::string("##SourceCombo") + identifier).c_str(), currentName.c_str()))
     {
         for (size_t i = 0; i < layers.size(); i++)
         {
@@ -478,8 +501,6 @@ bool DrawPairPointControl(const std::string& identifier, c3ga::Mvec<double>& pai
 
     return somethingChanged;
 }
-
-
 
 bool DrawDualPlaneControl(const std::string& identifier, c3ga::Mvec<double>& dualPlane, const float& sensitivity=0.05f, const float& width=100.0f) 
 {
@@ -708,7 +729,7 @@ bool DrawLayerContent(const LayerPtr& layer, const DualMode& dualMode)
                     // Dual pair point control
                     auto pairPoint = obj.dual();
                     ImGui::SameLine();
-                    if(DrawPairPointControl(identifier, obj, sensitivity, availableWidth))
+                    if(DrawPairPointControl(identifier, pairPoint, sensitivity, availableWidth))
                     {
                         somethingChanged = true;
                         obj = pairPoint.dual();

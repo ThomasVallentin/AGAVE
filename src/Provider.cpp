@@ -104,6 +104,36 @@ bool RandomGenerator::Compute(Layer& layer)
 
                 break;
             }
+            case c3ga::MvecType::Plane:
+            {
+                for (size_t i=0 ; i < m_count ; ++i)
+                    objects.push_back(c3ga::dualPlane<double>(c3ga::randomVector<double>() * m_extents).dual());
+
+                break;
+            }
+            case c3ga::MvecType::DualPlane:
+            {
+                for (size_t i=0 ; i < m_count ; ++i)
+                    objects.push_back(c3ga::dualPlane<double>(c3ga::randomVector<double>() * m_extents));
+
+                break;
+            }
+            case c3ga::MvecType::PairPoint:
+            {
+                for (size_t i=0 ; i < m_count ; ++i)
+                    objects.push_back(c3ga::randomPoint<double>() * m_extents ^ 
+                                      c3ga::randomPoint<double>() * m_extents);
+
+                break;
+            }
+            case c3ga::MvecType::DualPairPoint:
+            {
+                for (size_t i=0 ; i < m_count ; ++i)
+                    objects.push_back((c3ga::randomPoint<double>() * m_extents ^ 
+                                       c3ga::randomPoint<double>() * m_extents).dual());
+
+                break;
+            }
         }
 
         if (IsAnimated())
@@ -144,14 +174,6 @@ bool Subset::Compute(Layer& layer)
             objects[i] = sourceObjs[i];
 
     return true;
-}
-
-// == Operator Based Provider ==
-
-void OperatorBasedProvider::SetOperator(const Operator& op)
-{
-    if (m_op != op)
-        m_op = op;
 }
 
 // == Self Combination ==
@@ -220,7 +242,9 @@ bool SelfCombination::Compute(Layer& layer)
         for (uint i=0 ; i < outObjCount ; ++i)
         {
             for (const auto& index : combinations[i])
+            {
                 m_indices.push_back(index);
+            }
         }
     }
 
@@ -236,6 +260,10 @@ bool SelfCombination::Compute(Layer& layer)
                 ++idx;
                 obj = op(obj, sourceObjs[m_indices[idx]].dual());
             }
+            ++idx;
+
+            if (GetProductWithEi())
+                obj = op(obj, c3ga::ei<double>());
         }
     }
     else
@@ -247,6 +275,10 @@ bool SelfCombination::Compute(Layer& layer)
                 ++idx;
                 obj = op(obj, sourceObjs[m_indices[idx]]);
             }
+            ++idx;
+
+            if (GetProductWithEi())
+                obj = op(obj, c3ga::ei<double>());
         }
     }
 
@@ -289,8 +321,11 @@ bool Combination::Compute(Layer& layer)
         {
             result[i] = op(source1IsDual ? s1.dual() : s1, 
                            source2IsDual ? s2.dual() : s2);
+            if (GetProductWithEi())
+                result[i] = op(result[i], c3ga::ei<double>());
             ++i;
         }
+
     }
 
     return true;
