@@ -126,26 +126,35 @@ void Renderer::BuildBatches(const LayerPtrArray& layers)
                 // Points
                 case c3ga::MvecType::Point: {
                     if ((int)m_renderSettings.dualMode & (int)DualMode_Default)
+                    {
+                        glm::vec3 color = glm::abs(glm::normalize(glm::vec3(obj[c3ga::E1], obj[c3ga::E2], obj[c3ga::E3])));
                         points.push_back({{obj[c3ga::E1], obj[c3ga::E2], obj[c3ga::E3]}, 
-                                          {1.0f, 1.0f, 0.0f, 1.0f}});
+                                          {color, 1.0f}});
+                    }
                     break;
                 }
 
                 // Flat point
                 case c3ga::MvecType::FlatPoint: {
-                    c3ga::Mvec<double> flatPoint;
-                    c3ga::extractFlatPoint<double>(obj, flatPoint);
                     if ((int)m_renderSettings.dualMode & (int)DualMode_Default)
+                    {
+                        c3ga::Mvec<double> flatPoint;
+                        c3ga::extractFlatPoint<double>(obj, flatPoint);
+                        glm::vec3 color = glm::abs(glm::normalize(glm::vec3(flatPoint[c3ga::E1], flatPoint[c3ga::E2], flatPoint[c3ga::E3])));
                         points.push_back({{flatPoint[c3ga::E1], flatPoint[c3ga::E2], flatPoint[c3ga::E3]},
-                                          {1.0, 1.0, 0.0, 1.0}});
+                                          {color, 1.0f}});
+                    }
                     break;
                 }
                 case c3ga::MvecType::DualFlatPoint: {
-                    c3ga::Mvec<double> flatPoint;
-                    c3ga::extractFlatPoint<double>(obj.dual(), flatPoint);
                     if ((int)m_renderSettings.dualMode & (int)DualMode_Dual)
+                    {
+                        c3ga::Mvec<double> flatPoint;
+                        c3ga::extractFlatPoint<double>(obj.dual(), flatPoint);
+                        glm::vec3 color = glm::abs(glm::normalize(glm::vec3(flatPoint[c3ga::E1], flatPoint[c3ga::E2], flatPoint[c3ga::E3])));
                         points.push_back({{flatPoint[c3ga::E1], flatPoint[c3ga::E2], flatPoint[c3ga::E3]},
-                                          {1.0, 1.0, 0.0, 1.0}});
+                                          {color, 1.0f}});
+                    }
                     break;
                 }
 
@@ -153,16 +162,20 @@ void Renderer::BuildBatches(const LayerPtrArray& layers)
                 case c3ga::MvecType::Sphere:
                 case c3ga::MvecType::ImaginarySphere: {
                     if ((int)m_renderSettings.dualMode & (int)DualMode_Default)
+                    {
                         spheres.push_back({c3ga::extractDualSphereMatrix(obj.dual()),
                                            {0.0, 0.0, 1.0, 0.1}});
+                    }
                     break;
                 }
 
                 case c3ga::MvecType::DualSphere:           
                 case c3ga::MvecType::ImaginaryDualSphere: {
                     if ((int)m_renderSettings.dualMode & (int)DualMode_Dual)
+                    {
                         spheres.push_back({c3ga::extractDualSphereMatrix(obj),
                                            {0.0, 0.0, 1.0, 0.1}});
+                    }
                     break;
                 }
 
@@ -170,17 +183,21 @@ void Renderer::BuildBatches(const LayerPtrArray& layers)
                 case c3ga::MvecType::Circle:             // == DualPairPoint   
                 case c3ga::MvecType::ImaginaryCircle: {  // == DualImaginaryPairPoint
                     if ((int)m_renderSettings.dualMode & (int)DualMode_Default)
+                    {
                         circles.push_back({c3ga::extractDualCircleMatrix(obj.dual()),
                                            {1.0, 1.0, 0.0, 1.0}});
+                    }
 
                     if ((int)m_renderSettings.dualMode & (int)DualMode_Dual)
                     {
                         c3ga::Mvec<double> pt1, pt2;
                         c3ga::extractPairPoint(obj.dual(), pt1, pt2);
-                        points.push_back({{pt1[c3ga::E1], pt1[c3ga::E2], pt1[c3ga::E3]},
-                                          {1.0, 0.0, 0.0, 1.0}});
-                        points.push_back({{pt2[c3ga::E1], pt2[c3ga::E2], pt2[c3ga::E3]},
-                                          {1.0, 0.0, 0.0, 1.0}});
+
+                        glm::vec3 p1{pt1[c3ga::E1], pt1[c3ga::E2], pt1[c3ga::E3]};
+                        glm::vec3 p2{pt2[c3ga::E1], pt2[c3ga::E2], pt2[c3ga::E3]};
+
+                        points.push_back({p1, {glm::abs(glm::normalize(p1)), 1.0}});
+                        points.push_back({p2, {glm::abs(glm::normalize(p2)), 1.0}});
                     }
                     break;
                 }
@@ -190,15 +207,19 @@ void Renderer::BuildBatches(const LayerPtrArray& layers)
                     {
                         c3ga::Mvec<double> pt1, pt2;
                         c3ga::extractPairPoint(obj, pt1, pt2);
-                        points.push_back({{pt1[c3ga::E1], pt1[c3ga::E2], pt1[c3ga::E3]}, 
-                                          {1.0, 0.0, 0.0, 1.0}});
-                        points.push_back({{pt2[c3ga::E1], pt2[c3ga::E2], pt2[c3ga::E3]}, 
-                                          {1.0, 0.0, 0.0, 1.0}});
+
+                        glm::vec3 p1{pt1[c3ga::E1], pt1[c3ga::E2], pt1[c3ga::E3]};
+                        glm::vec3 p2{pt2[c3ga::E1], pt2[c3ga::E2], pt2[c3ga::E3]};
+
+                        points.push_back({p1, {glm::abs(glm::normalize(p1)), 1.0}});
+                        points.push_back({p2, {glm::abs(glm::normalize(p2)), 1.0}});
                     }
 
                     if ((int)m_renderSettings.dualMode & (int)DualMode_Dual)
+                    {
                         circles.push_back({c3ga::extractDualCircleMatrix(obj), 
                                            {1.0, 1.0, 0.0, 1.0}});
+                    }
 
                     break;
                 }
@@ -206,28 +227,40 @@ void Renderer::BuildBatches(const LayerPtrArray& layers)
                 // Planes
                 case c3ga::MvecType::Plane: {
                     if ((int)m_renderSettings.dualMode & (int)DualMode_Default)
-                        planes.push_back({c3ga::extractDualPlaneMatrix(obj.dual()), 
-                                          {0.0, 1.0, 0.0, 0.1}});
+                    {
+                        glm::mat4 matrix = c3ga::extractDualPlaneMatrix(obj.dual());
+                        glm::vec3 color = glm::abs(glm::normalize(glm::vec3(matrix[1])));
+                        planes.push_back({matrix, {color, 0.1}});
+                    }
                     break;
                 }
                 case c3ga::MvecType::DualPlane: {
                     if ((int)m_renderSettings.dualMode & (int)DualMode_Dual)
-                        planes.push_back({c3ga::extractDualPlaneMatrix(obj), 
-                                          {0.0, 1.0, 0.0, 0.1}});
+                    {
+                        glm::mat4 matrix = c3ga::extractDualPlaneMatrix(obj);
+                        glm::vec3 color = glm::abs(glm::normalize(glm::vec3(matrix[1])));
+                        planes.push_back({matrix, {color, 0.1}});
+                    }
                     break;
                 }
 
                 // Lines
                 case c3ga::MvecType::Line: {
                     if ((int)m_renderSettings.dualMode & (int)DualMode_Default)
-                        lines.push_back({c3ga::extractDualLineMatrix(obj.dual()), 
-                                         {1.0, 0.0, 1.0, 1.0}});
+                    {
+                        glm::mat4 matrix = c3ga::extractDualLineMatrix(obj.dual());
+                        glm::vec3 color = glm::abs(glm::normalize(glm::vec3(matrix[2])));
+                        lines.push_back({matrix, {color, 1.0}});
+                    }
                     break;
                 }
                 case c3ga::MvecType::DualLine: {
                     if ((int)m_renderSettings.dualMode & (int)DualMode_Dual)
-                        lines.push_back({c3ga::extractDualLineMatrix(obj), 
-                                         {1.0, 0.0, 1.0, 1.0}});
+                    {
+                        glm::mat4 matrix = c3ga::extractDualLineMatrix(obj);
+                        glm::vec3 color = glm::abs(glm::normalize(glm::vec3(matrix[2])));
+                        lines.push_back({matrix, {color, 1.0}});
+                    }
                     break;
                 }
             }

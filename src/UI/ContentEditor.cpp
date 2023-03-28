@@ -283,7 +283,7 @@ bool DrawSelfCombinationProvider(const LayerPtr& layer)
 
     auto prodWithEi = provider->GetProductWithEi();
     ImGui::AlignTextToFramePadding();
-    ImGui::Text("Last product with E∞ :");
+    ImGui::Text("Last product with Ei :");
     ImGui::SameLine();
     ImGui::SetNextItemWidth(75);
     if (ImGui::Checkbox((std::string("##SelfCombinationEi") + std::to_string(layer->GetUUID())).c_str(), &prodWithEi))

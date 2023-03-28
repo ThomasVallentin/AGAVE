@@ -151,8 +151,9 @@ private:
     uint32_t m_dimension;
 
     std::vector<uint32_t> m_indices;
-    int m_prevCount;
-    uint32_t m_prevDim, m_prevSourceCount;
+    int m_prevCount = 0;
+    uint32_t m_prevDim = 0, m_prevSourceCount = 0;
+    bool m_prevProductWithEi = false;
 };
 
 

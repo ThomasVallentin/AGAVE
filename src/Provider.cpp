@@ -228,14 +228,13 @@ bool SelfCombination::Compute(Layer& layer)
     }
 
     MvecArray& result = layer.GetObjects();
-    uint32_t outObjCount;
-    
-    std::cout << m_prevCount << " " << " " << m_count << " | " << m_prevDim << " " << m_dimension << " | " << m_prevSourceCount << " " << sourceObjCount << std::endl;
+    uint32_t outObjCount = layer.GetObjects().size();
     
     if (m_indices.empty() || 
         m_prevCount != m_count || 
         m_prevDim != m_dimension || 
-        m_prevSourceCount != sourceObjCount)
+        m_prevSourceCount != sourceObjCount ||
+        m_prevProductWithEi != GetProductWithEi())
     {
         // Generate random samples
         std::random_device device;
@@ -290,7 +289,8 @@ bool SelfCombination::Compute(Layer& layer)
 
     m_prevCount = m_count;
     m_prevDim = m_dimension;
-    m_prevSourceCount = sources.size();
+    m_prevSourceCount = sourceObjCount;
+    m_prevProductWithEi = GetProductWithEi();
 
     return true;
 }
