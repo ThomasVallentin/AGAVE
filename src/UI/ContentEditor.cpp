@@ -46,8 +46,7 @@ bool DrawProviderComboBox(const LayerPtr& layer)
 {
     bool somethingChanged = false;
 
-    const char* providerNames[] = {"None (empty layer)",
-                                   "Explicit",
+    const char* providerNames[] = {"Explicit",
                                    "Random generator",
                                    "Subset",
                                    "Combination",
@@ -73,7 +72,7 @@ bool DrawProviderComboBox(const LayerPtr& layer)
 
     auto provider = layer->GetProvider();
     std::string identifier = std::to_string(layer->GetUUID());
-    uint32_t currentIndex = provider ? provider->GetType() : ProviderType_None;
+    uint32_t currentIndex = provider ? provider->GetType() : ProviderType_Explicit;
     ImGui::SetNextItemWidth(150);
     if (ImGui::BeginCombo((std::string("##ProviderCombo") + identifier).c_str(), providerNames[currentIndex]))
     {
@@ -178,17 +177,17 @@ bool DrawRandomGenerator(const LayerPtr& layer, const DualMode& dualMode)
                                };
 
     c3ga::MvecType objType = provider->GetObjectType();
-    const char* objTypeName = c3ga::typeToName(objType, true, !(dualMode & DualMode_Default)).c_str();
+    std::string objTypeName = c3ga::typeToName(objType, true, !(dualMode & DualMode_Default));
 
     ImGui::AlignTextToFramePadding();
     ImGui::Text("Type :");
     ImGui::SameLine();
     ImGui::SetNextItemWidth(100);
-    if (ImGui::BeginCombo((std::string("##RandomGeneratorObjTypeCombo") + identifier).c_str(), objTypeName))
+    if (ImGui::BeginCombo((std::string("##RandomGeneratorObjTypeCombo") + identifier).c_str(), objTypeName.c_str()))
     {
         for (size_t i=0 ; i < IM_ARRAYSIZE(typeNames) ; i++)
         {
-            bool selected = objTypeName == typeNames[i];
+            bool selected = objTypeName.c_str() == typeNames[i];
             if (ImGui::Selectable(typeNames[i], selected) && !selected) {
                 provider->SetObjectType(types[i]);
                 layer->SetDirty(DirtyBits_Provider);

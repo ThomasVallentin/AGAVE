@@ -156,19 +156,18 @@ bool LayerStackWidget::DrawLayer(const LayerPtr& layer, const int& index)
             if (m_lastIndex >= 0)
             {
                 int minIndex = index;
+                int maxIndex = m_lastIndex;
                 if (minIndex > m_lastIndex)
-                    std::swap(minIndex, m_lastIndex);
+                    std::swap(minIndex, maxIndex);
                 
                 const auto& layers = m_layerStack->GetLayers();
-                for (int i=minIndex ; i < m_lastIndex + 1 ; ++i)
+                for (int i=minIndex ; i < maxIndex + 1 ; ++i)
                 {
-                    SelectLayer(layers[i]);
+                    SelectLayer(layers[i], index);
                 }
             } else {
-                SelectLayer(layer);
+                SelectLayer(layer, index);
             }
-
-            m_lastIndex = index;
         }
 
         // Ctrl modifier + click -> Toggle selection
@@ -177,16 +176,14 @@ bool LayerStackWidget::DrawLayer(const LayerPtr& layer, const int& index)
             if (isSelected){
                 DeselectLayer(layer);
             } else {
-                SelectLayer(layer);
-                m_lastIndex = index;
+                SelectLayer(layer, index);
             }
         }
 
         // Simple click -> Replace selection
         else {
             ClearSelection();
-            SelectLayer(layer);
-            m_lastIndex = index;
+            SelectLayer(layer, index);
         }
     }
 
@@ -201,53 +198,7 @@ bool LayerStackWidget::DrawLayer(const LayerPtr& layer, const int& index)
 
 bool LayerStackWidget::Draw() 
 {
-    ImGui::Begin("Layer Stack", nullptr, ImGuiWindowFlags_MenuBar);
-
-    if (ImGui::BeginMenuBar())
-    {
-
-        if (ImGui::BeginMenu("Create"))
-        {
-            if (ImGui::MenuItem("Layer"))
-            {
-                auto lyr = m_layerStack->NewLayer("Layer", {});
-                ClearSelection();
-                SelectLayer(lyr);
-                m_lastIndex = m_layerStack->GetLayers().size() - 1;
-            }
-            if (ImGui::MenuItem("Random generator"))
-            {
-                auto lyr = m_layerStack->NewRandomGenerator("Random Generator");
-                ClearSelection();
-                SelectLayer(lyr);
-                m_lastIndex = m_layerStack->GetLayers().size() - 1;
-            }
-            if (ImGui::MenuItem("Subset", "", nullptr, m_selection.size() >= 1))
-            {
-                auto lyr = m_layerStack->NewSubset("Subset", m_selection.back());
-                ClearSelection();
-                SelectLayer(lyr);
-                m_lastIndex = m_layerStack->GetLayers().size() - 1;
-            }
-            if (ImGui::MenuItem("SelfCombination", "", nullptr, m_selection.size() >= 1))
-            {
-                auto lyr = m_layerStack->NewSelfCombination("SelfCombination", m_selection.back());
-                ClearSelection();
-                SelectLayer(lyr);
-                m_lastIndex = m_layerStack->GetLayers().size() - 1;
-            }
-            if (ImGui::MenuItem("Combination", "", nullptr, m_selection.size() >= 2))
-            {
-                auto lyr = m_layerStack->NewCombination("Combination", m_selection[m_selection.size() - 2], m_selection.back());
-                ClearSelection();
-                SelectLayer(lyr);
-                m_lastIndex = m_layerStack->GetLayers().size() - 1;
-            }
-            ImGui::EndMenu();
-        }
-
-        ImGui::EndMenuBar();
-    }
+    ImGui::Begin("Layer Stack", nullptr);
 
     ImGui::PushStyleColor(ImGuiCol_Header,        ImVec4(0.17f, 0.17f, 0.17f, 1.00f));
     ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.27f, 0.27f, 0.27f, 1.00f));
@@ -298,12 +249,36 @@ bool LayerStackWidget::IsSelected(const LayerPtr &layer) const
     return std::find(m_selection.begin(), m_selection.end(), layer) != m_selection.end();
 }
 
-void LayerStackWidget::SelectLayer(const LayerPtr &layer) 
+void LayerStackWidget::SelectLayer(const LayerPtr &layer, const int& index) 
 {
+    if (index == -1)
+    {
+        const auto& layers = m_layerStack->GetLayers();
+        const auto it = std::find(layers.begin(), layers.end(), layer);
+        if (it == layers.end())
+            return;
+        
+        m_lastIndex = it - layers.begin();
+    }
+
     if (!IsSelected(layer))
     {
         m_selection.push_back(layer);
         UpdateSources();
+
+        if (index < 0)
+        {
+            const auto& layers = m_layerStack->GetLayers();
+            const auto it = std::find(layers.begin(), layers.end(), layer);
+            if (it == layers.end())
+                return;
+            
+            m_lastIndex = it - layers.begin();
+        }
+        else
+        {
+            m_lastIndex = index;
+        }
     }
 }
 

@@ -25,8 +25,7 @@ namespace Operators {
 
 enum ProviderType
 {
-    ProviderType_None = 0,
-    ProviderType_Explicit,
+    ProviderType_Explicit = 0,
     ProviderType_RandomGenerator,
     ProviderType_Subset,
     ProviderType_Combination,

@@ -135,6 +135,7 @@ int main(int argc, char* argv[])
         {
             ImGui::PushStyleColor(ImGuiCol_Separator, ImVec4(0.3f, 0.3f, 0.3f, 1.0f));
             ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(6, 6));
+            ImGui::SetNextWindowSize({120.0f, -1});
             if (ImGui::BeginMenu("File"))
             {
                 if(ImGui::MenuItem("  New##FileMenuNew")) 
@@ -160,6 +161,59 @@ int main(int argc, char* argv[])
                 ImGui::EndMenu();
             }
 
+            ImGui::SetNextWindowSize({120.0f, -1});
+            if (ImGui::BeginMenu("Layers"))
+            {
+                if (ImGui::BeginMenu("New"))
+                { 
+                    if (ImGui::MenuItem("Empty layer"))
+                    {
+                        auto lyr = layerStack->NewLayer("Layer", {});
+                        layerStackWid.ClearSelection();
+                        layerStackWid.SelectLayer(lyr);
+                    }
+                    if (ImGui::MenuItem("Random generator"))
+                    {
+                        auto lyr = layerStack->NewRandomGenerator("Random Generator");
+                        layerStackWid.ClearSelection();
+                        layerStackWid.SelectLayer(lyr);
+                    }
+
+                    const auto& selection = layerStackWid.GetSelection();
+                    if (ImGui::MenuItem("Subset", "", nullptr, selection.size() >= 1))
+                    {
+                        auto lyr = layerStack->NewSubset("Subset", selection.back());
+                        layerStackWid.ClearSelection();
+                        layerStackWid.SelectLayer(lyr);
+                    }
+                    if (ImGui::MenuItem("SelfCombination", "", nullptr, selection.size() >= 1))
+                    {
+                        auto lyr = layerStack->NewSelfCombination("SelfCombination", selection.back());
+                        layerStackWid.ClearSelection();
+                        layerStackWid.SelectLayer(lyr);
+                    }
+                    if (ImGui::MenuItem("Combination", "", nullptr, selection.size() >= 2))
+                    {
+                        auto lyr = layerStack->NewCombination("Combination", selection[selection.size() - 2], selection.back());
+                        layerStackWid.ClearSelection();
+                        layerStackWid.SelectLayer(lyr);
+                    }
+
+                    ImGui::EndMenu();
+                }
+
+                ImGui::EndMenu();
+            }
+
+            if (ImGui::BeginMenu("Editors"))
+            {
+                if (ImGui::MenuItem("New Content Editor"))
+                    contentEditors.emplace_back(layerStack);
+
+                ImGui::EndMenu();
+            }
+
+            ImGui::SetNextWindowSize({120.0f, -1});
             if (ImGui::BeginMenu("Display"))
             {
                 ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(4, 8));
@@ -184,14 +238,6 @@ int main(int argc, char* argv[])
                 ImGui::PopStyleVar(3);
 
                 ImGui::Spacing();
-
-                ImGui::EndMenu();
-            }
-
-            if (ImGui::BeginMenu("Editors"))
-            {
-                if (ImGui::MenuItem("New Content Editor"))
-                    contentEditors.emplace_back(layerStack);
 
                 ImGui::EndMenu();
             }

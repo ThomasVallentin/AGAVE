@@ -23,7 +23,7 @@ public:
 
     LayerPtrArray &GetSelection();
     bool IsSelected(const LayerPtr &layer) const;
-    void SelectLayer(const LayerPtr &layer);
+    void SelectLayer(const LayerPtr &layer, const int& index=-1);
     void DeselectLayer(const LayerPtr &layer);
     void ClearSelection();
     LayerPtr GetLastSelectedLayer() const;
