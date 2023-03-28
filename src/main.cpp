@@ -29,7 +29,7 @@ int main(int argc, char* argv[])
                                     .parent_path()
                                     .parent_path());
 
-    auto window = Window({1280, 720, "AGAVE - Animated Geometric Algebra Viewer to Experiment"});
+    auto window = Window({1280, 720, "AGAVE - Animated Geometric Algebra Viewer for Experiments"});
     window.SetIcon({resolver.Resolve("resources/AGAVE_icon_64.png")});
 
     Camera camera(50.0f, 1280.0f / 720.0f, 0.1f, 10000.0f);
