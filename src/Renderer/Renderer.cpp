@@ -37,9 +37,11 @@ Renderer::Renderer()
     // Shaders
     auto& resolver = Resolver::Get();
     m_pointsShader = Shader::Open(resolver.Resolve("resources/shaders/points.vert"),
-                                  resolver.Resolve("resources/shaders/points.frag"));
+                                  resolver.Resolve("resources/shaders/solidColor.frag"));
     m_linesShader = Shader::Open(resolver.Resolve("resources/shaders/lines.vert"),
-                                 resolver.Resolve("resources/shaders/points.frag"));
+                                 resolver.Resolve("resources/shaders/solidColor.frag"));
+    m_meshShader = Shader::Open(resolver.Resolve("resources/shaders/mesh.vert"),
+                                resolver.Resolve("resources/shaders/lambert.frag"));
 }
 
 Renderer::~Renderer()
@@ -53,7 +55,8 @@ void Renderer::Invalidate()
 }
 
 void Renderer::Render(const LayerPtrArray& layers,
-                      const glm::mat4& viewProjMatrix) 
+                      const glm::mat4& viewMatrix,
+                      const glm::mat4& projMatrix) 
 {
     if (!m_isValid)
     {
@@ -63,14 +66,16 @@ void Renderer::Render(const LayerPtrArray& layers,
     glPointSize(m_renderSettings.pointSize);
 
     m_pointsShader->Bind();
-    m_pointsShader->SetMat4("uViewProjMatrix", viewProjMatrix);
+    m_pointsShader->SetMat4("uViewMatrix", viewMatrix);
+    m_pointsShader->SetMat4("uProjMatrix", projMatrix);
     m_pointsShader->SetVec4("uColor", {1, 0, 0, 1});
 
     m_points->Bind();
     glDrawArrays(GL_POINTS, 0, m_pointCount);
 
     m_linesShader->Bind();
-    m_linesShader->SetMat4("uViewProjMatrix", viewProjMatrix);
+    m_linesShader->SetMat4("uViewMatrix", viewMatrix);
+    m_linesShader->SetMat4("uProjMatrix", projMatrix);
 
     glEnable(GL_DEPTH_TEST);
 
@@ -82,10 +87,14 @@ void Renderer::Render(const LayerPtrArray& layers,
 
     glDisable(GL_DEPTH_TEST);
 
-    m_linesShader->SetVec4("uColor", {0, 0, 1, 0.1});
+    m_meshShader->Bind();
+    m_meshShader->SetMat4("uViewMatrix", viewMatrix);
+    m_meshShader->SetMat4("uProjMatrix", projMatrix);
+
+    m_meshShader->SetVec4("uColor", {0, 0, 1, 0.15});
     m_spheres.Render();
 
-    m_linesShader->SetVec4("uColor", {0, 1, 0, 0.1});
+    m_meshShader->SetVec4("uColor", {0, 1, 0, 0.15});
     m_planes.Render();
 }
 

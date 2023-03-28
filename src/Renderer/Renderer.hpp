@@ -34,7 +34,8 @@ public:
 
     void Invalidate();
     void Render(const LayerPtrArray& layers, 
-                const glm::mat4& viewProjMatrix);
+                const glm::mat4& viewMatrix,
+                const glm::mat4& projMatrix);
 
 private:
 
@@ -58,6 +59,7 @@ private:
 
     ShaderPtr m_pointsShader;
     ShaderPtr m_linesShader;
+    ShaderPtr m_meshShader;
 
     RenderSettings m_renderSettings;
 

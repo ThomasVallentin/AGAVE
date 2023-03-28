@@ -2,7 +2,9 @@
 
 layout(location = 0) in vec3 aPosition;
 
-uniform mat4 uViewProjMatrix;
+uniform mat4 uViewMatrix;
+uniform mat4 uProjMatrix;
+
 
 out VertexData
 {
@@ -12,7 +14,7 @@ out VertexData
 
 void main() 
 {
-    vec4 position = uViewProjMatrix * vec4(aPosition, 1.0);
+    vec4 position = uProjMatrix * uViewMatrix * vec4(aPosition, 1.0);
     outVertex.position = position.xyz;
 
     gl_Position = position;

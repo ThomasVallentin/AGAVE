@@ -91,7 +91,9 @@ int main(int argc, char* argv[])
         if (somethingChanged) {
             renderer.Invalidate();
         }
-        renderer.Render(layerStack->GetLayers(), camera.GetViewProjectionMatrix());
+        renderer.Render(layerStack->GetLayers(), 
+                        camera.GetViewMatrix(), 
+                        camera.GetProjectionMatrix());
 
         // Reset the invalidation variable 
         somethingChanged = false;
