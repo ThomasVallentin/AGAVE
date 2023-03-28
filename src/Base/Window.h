@@ -41,7 +41,7 @@ public:
     void Update();
 
     void SetTitle(const std::string& title);
-
+    void SetIcon(const std::vector<std::string>& iconPaths) const;
     void SetEventCallback(const std::function<void(Event*)>& eventCallback);
     inline std::function<void(Event*)> GetEventCallback() const { return m_eventCallback; };
 

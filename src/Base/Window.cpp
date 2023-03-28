@@ -8,6 +8,8 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
+#include <stb_image.h>
+
 
 Window::Window(const WindowInternalData& settings) :
         m_internalData({settings.width, 
@@ -312,6 +314,20 @@ bool Window::ShouldClose() const
 void Window::SetTitle(const std::string& title)
 {
     glfwSetWindowTitle(m_window, title.c_str());
+}
+
+void Window::SetIcon(const std::vector<std::string>& iconPaths) const
+{
+    GLFWimage icons[iconPaths.size()];
+    for (size_t i = 0 ; i < iconPaths.size() ; ++i)
+    {
+        icons[i].pixels = stbi_load(iconPaths[i].c_str(), &icons[i].width, &icons[i].height, 0, 4); //rgba channels 
+    }
+    
+    glfwSetWindowIcon(m_window, iconPaths.size(), icons);
+
+    for (size_t i = 0 ; i < iconPaths.size() ; ++i)
+        stbi_image_free(icons[i].pixels);
 }
 
 void Window::SetEventCallback(const std::function<void(Event *)> &eventCallback)
