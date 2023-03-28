@@ -151,7 +151,8 @@ private:
     uint32_t m_dimension;
 
     std::vector<uint32_t> m_indices;
-    uint32_t m_prevCount, m_prevDim, m_prevSourceCount;
+    int m_prevCount;
+    uint32_t m_prevDim, m_prevSourceCount;
 };
 
 

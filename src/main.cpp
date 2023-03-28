@@ -174,7 +174,7 @@ int main(int argc, char* argv[])
                     }
                     if (ImGui::MenuItem("Random generator"))
                     {
-                        auto lyr = layerStack->NewRandomGenerator("Random Generator");
+                        auto lyr = layerStack->NewRandomGenerator("RandomGeneratorLayer");
                         layerStackWid.ClearSelection();
                         layerStackWid.SelectLayer(lyr);
                     }
@@ -182,19 +182,19 @@ int main(int argc, char* argv[])
                     const auto& selection = layerStackWid.GetSelection();
                     if (ImGui::MenuItem("Subset", "", nullptr, selection.size() >= 1))
                     {
-                        auto lyr = layerStack->NewSubset("Subset", selection.back());
+                        auto lyr = layerStack->NewSubset("SubsetLayer", selection.back());
                         layerStackWid.ClearSelection();
                         layerStackWid.SelectLayer(lyr);
                     }
                     if (ImGui::MenuItem("SelfCombination", "", nullptr, selection.size() >= 1))
                     {
-                        auto lyr = layerStack->NewSelfCombination("SelfCombination", selection.back());
+                        auto lyr = layerStack->NewSelfCombination("SelfCombinationLayer", selection.back());
                         layerStackWid.ClearSelection();
                         layerStackWid.SelectLayer(lyr);
                     }
                     if (ImGui::MenuItem("Combination", "", nullptr, selection.size() >= 2))
                     {
-                        auto lyr = layerStack->NewCombination("Combination", selection[selection.size() - 2], selection.back());
+                        auto lyr = layerStack->NewCombination("CombinationLayer", selection[selection.size() - 2], selection.back());
                         layerStackWid.ClearSelection();
                         layerStackWid.SelectLayer(lyr);
                     }

@@ -74,8 +74,13 @@ bool RandomGenerator::Compute(Layer& layer)
             case c3ga::MvecType::Point:
             {
                 for (size_t i=0 ; i < m_count ; ++i)
-                    objects.push_back(c3ga::randomPoint<double>() * m_extents);
-
+                {
+                    std::uniform_real_distribution<double> distrib(-m_extents, m_extents);
+                    objects.push_back(c3ga::point<double>(distrib(c3ga::generator),
+                                                          distrib(c3ga::generator), 
+                                                          distrib(c3ga::generator)));
+                }
+                    
                 break;
             }
             case c3ga::MvecType::Sphere:
@@ -224,7 +229,9 @@ bool SelfCombination::Compute(Layer& layer)
 
     MvecArray& result = layer.GetObjects();
     uint32_t outObjCount;
-
+    
+    std::cout << m_prevCount << " " << " " << m_count << " | " << m_prevDim << " " << m_dimension << " | " << m_prevSourceCount << " " << sourceObjCount << std::endl;
+    
     if (m_indices.empty() || 
         m_prevCount != m_count || 
         m_prevDim != m_dimension || 
@@ -238,13 +245,12 @@ bool SelfCombination::Compute(Layer& layer)
         std::shuffle(combinations.begin(), combinations.end(), engine);
 
         outObjCount = m_count < 0 ? combinations.size() : std::min((size_t)m_count, combinations.size());
-        m_indices.reserve(outObjCount * m_dimension);
-        for (uint i=0 ; i < outObjCount ; ++i)
+        m_indices.resize(outObjCount * m_dimension);
+        uint32_t i = 0;
+        for (uint n=0 ; n < outObjCount ; ++n)
         {
-            for (const auto& index : combinations[i])
-            {
-                m_indices.push_back(index);
-            }
+            for (const auto& index : combinations[n])
+                m_indices[i++] = index;
         }
     }
 
