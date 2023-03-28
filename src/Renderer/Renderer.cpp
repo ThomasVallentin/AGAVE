@@ -10,6 +10,20 @@
 #include <glm/glm.hpp>
 
 
+struct InstancedData
+{
+    glm::mat4 transform;
+    glm::vec4 color;
+
+};
+
+struct PointData
+{
+    glm::vec3 position;
+    glm::vec4 color;
+};
+
+
 Renderer::Renderer()
 {
     // Spheres
@@ -30,7 +44,8 @@ Renderer::Renderer()
 
     // Points
     auto pointsVbo = VertexBuffer::Create();
-    pointsVbo->SetLayout({{"Position",  3, GL_FLOAT, false}});
+    pointsVbo->SetLayout({{"Position",  3, GL_FLOAT, false},
+                          {"Color",     4, GL_FLOAT, false}});
     m_points = VertexArray::Create();
     m_points->AddVertexBuffer(pointsVbo);
 
@@ -68,22 +83,9 @@ void Renderer::Render(const LayerPtrArray& layers,
     m_pointsShader->Bind();
     m_pointsShader->SetMat4("uViewMatrix", viewMatrix);
     m_pointsShader->SetMat4("uProjMatrix", projMatrix);
-    m_pointsShader->SetVec4("uColor", {1, 0, 0, 1});
 
     m_points->Bind();
     glDrawArrays(GL_POINTS, 0, m_pointCount);
-
-    m_linesShader->Bind();
-    m_linesShader->SetMat4("uViewMatrix", viewMatrix);
-    m_linesShader->SetMat4("uProjMatrix", projMatrix);
-
-    glEnable(GL_DEPTH_TEST);
-
-    m_linesShader->SetVec4("uColor", {1, 1, 0, 1});
-    m_circles.Render();
-
-    m_linesShader->SetVec4("uColor", {1, 0, 1, 1});
-    m_lines.Render();
 
     glDisable(GL_DEPTH_TEST);
 
@@ -91,20 +93,26 @@ void Renderer::Render(const LayerPtrArray& layers,
     m_meshShader->SetMat4("uViewMatrix", viewMatrix);
     m_meshShader->SetMat4("uProjMatrix", projMatrix);
 
-    m_meshShader->SetVec4("uColor", {0, 0, 1, 0.15});
     m_spheres.Render();
-
-    m_meshShader->SetVec4("uColor", {0, 1, 0, 0.15});
     m_planes.Render();
+
+    glEnable(GL_DEPTH_TEST);
+
+    m_linesShader->Bind();
+    m_linesShader->SetMat4("uViewMatrix", viewMatrix);
+    m_linesShader->SetMat4("uProjMatrix", projMatrix);
+
+    m_circles.Render();
+    m_lines.Render();
 }
 
 void Renderer::BuildBatches(const LayerPtrArray& layers) 
 {
-    std::vector<glm::vec3> points;
-    std::vector<glm::mat4> spheres;
-    std::vector<glm::mat4> circles;
-    std::vector<glm::mat4> planes;
-    std::vector<glm::mat4> lines;
+    std::vector<PointData> points;
+    std::vector<InstancedData> spheres;
+    std::vector<InstancedData> circles;
+    std::vector<InstancedData> planes;
+    std::vector<InstancedData> lines;
     for (const auto& layer : layers)
     {
         if (!layer->IsVisible()) {
@@ -118,7 +126,8 @@ void Renderer::BuildBatches(const LayerPtrArray& layers)
                 // Points
                 case c3ga::MvecType::Point: {
                     if ((int)m_renderSettings.dualMode & (int)DualMode_Default)
-                        points.push_back({obj[c3ga::E1], obj[c3ga::E2], obj[c3ga::E3]});
+                        points.push_back({{obj[c3ga::E1], obj[c3ga::E2], obj[c3ga::E3]}, 
+                                          {1.0f, 1.0f, 0.0f, 1.0f}});
                     break;
                 }
 
@@ -127,14 +136,16 @@ void Renderer::BuildBatches(const LayerPtrArray& layers)
                     c3ga::Mvec<double> flatPoint;
                     c3ga::extractFlatPoint<double>(obj, flatPoint);
                     if ((int)m_renderSettings.dualMode & (int)DualMode_Default)
-                        points.push_back({flatPoint[c3ga::E1], flatPoint[c3ga::E2], flatPoint[c3ga::E3]});
+                        points.push_back({{flatPoint[c3ga::E1], flatPoint[c3ga::E2], flatPoint[c3ga::E3]},
+                                          {1.0, 1.0, 0.0, 1.0}});
                     break;
                 }
                 case c3ga::MvecType::DualFlatPoint: {
                     c3ga::Mvec<double> flatPoint;
                     c3ga::extractFlatPoint<double>(obj.dual(), flatPoint);
                     if ((int)m_renderSettings.dualMode & (int)DualMode_Dual)
-                        points.push_back({flatPoint[c3ga::E1], flatPoint[c3ga::E2], flatPoint[c3ga::E3]});
+                        points.push_back({{flatPoint[c3ga::E1], flatPoint[c3ga::E2], flatPoint[c3ga::E3]},
+                                          {1.0, 1.0, 0.0, 1.0}});
                     break;
                 }
 
@@ -142,14 +153,16 @@ void Renderer::BuildBatches(const LayerPtrArray& layers)
                 case c3ga::MvecType::Sphere:
                 case c3ga::MvecType::ImaginarySphere: {
                     if ((int)m_renderSettings.dualMode & (int)DualMode_Default)
-                        spheres.push_back(c3ga::extractDualSphereMatrix(obj.dual()));
+                        spheres.push_back({c3ga::extractDualSphereMatrix(obj.dual()),
+                                           {0.0, 0.0, 1.0, 0.1}});
                     break;
                 }
 
                 case c3ga::MvecType::DualSphere:           
                 case c3ga::MvecType::ImaginaryDualSphere: {
                     if ((int)m_renderSettings.dualMode & (int)DualMode_Dual)
-                        spheres.push_back(c3ga::extractDualSphereMatrix(obj));
+                        spheres.push_back({c3ga::extractDualSphereMatrix(obj),
+                                           {0.0, 0.0, 1.0, 0.1}});
                     break;
                 }
 
@@ -157,14 +170,17 @@ void Renderer::BuildBatches(const LayerPtrArray& layers)
                 case c3ga::MvecType::Circle:             // == DualPairPoint   
                 case c3ga::MvecType::ImaginaryCircle: {  // == DualImaginaryPairPoint
                     if ((int)m_renderSettings.dualMode & (int)DualMode_Default)
-                        circles.push_back(c3ga::extractDualCircleMatrix(obj.dual()));
-                    
+                        circles.push_back({c3ga::extractDualCircleMatrix(obj.dual()),
+                                           {1.0, 1.0, 0.0, 1.0}});
+
                     if ((int)m_renderSettings.dualMode & (int)DualMode_Dual)
                     {
                         c3ga::Mvec<double> pt1, pt2;
                         c3ga::extractPairPoint(obj.dual(), pt1, pt2);
-                        points.push_back({pt1[c3ga::E1], pt1[c3ga::E2], pt1[c3ga::E3]});
-                        points.push_back({pt2[c3ga::E1], pt2[c3ga::E2], pt2[c3ga::E3]});
+                        points.push_back({{pt1[c3ga::E1], pt1[c3ga::E2], pt1[c3ga::E3]},
+                                          {1.0, 0.0, 0.0, 1.0}});
+                        points.push_back({{pt2[c3ga::E1], pt2[c3ga::E2], pt2[c3ga::E3]},
+                                          {1.0, 0.0, 0.0, 1.0}});
                     }
                     break;
                 }
@@ -174,12 +190,15 @@ void Renderer::BuildBatches(const LayerPtrArray& layers)
                     {
                         c3ga::Mvec<double> pt1, pt2;
                         c3ga::extractPairPoint(obj, pt1, pt2);
-                        points.push_back({pt1[c3ga::E1], pt1[c3ga::E2], pt1[c3ga::E3]});
-                        points.push_back({pt2[c3ga::E1], pt2[c3ga::E2], pt2[c3ga::E3]});
+                        points.push_back({{pt1[c3ga::E1], pt1[c3ga::E2], pt1[c3ga::E3]}, 
+                                          {1.0, 0.0, 0.0, 1.0}});
+                        points.push_back({{pt2[c3ga::E1], pt2[c3ga::E2], pt2[c3ga::E3]}, 
+                                          {1.0, 0.0, 0.0, 1.0}});
                     }
 
                     if ((int)m_renderSettings.dualMode & (int)DualMode_Dual)
-                        circles.push_back(c3ga::extractDualCircleMatrix(obj));
+                        circles.push_back({c3ga::extractDualCircleMatrix(obj), 
+                                           {1.0, 1.0, 0.0, 1.0}});
 
                     break;
                 }
@@ -187,24 +206,28 @@ void Renderer::BuildBatches(const LayerPtrArray& layers)
                 // Planes
                 case c3ga::MvecType::Plane: {
                     if ((int)m_renderSettings.dualMode & (int)DualMode_Default)
-                        planes.push_back(c3ga::extractDualPlaneMatrix(obj.dual()));
+                        planes.push_back({c3ga::extractDualPlaneMatrix(obj.dual()), 
+                                          {0.0, 1.0, 0.0, 0.1}});
                     break;
                 }
                 case c3ga::MvecType::DualPlane: {
                     if ((int)m_renderSettings.dualMode & (int)DualMode_Dual)
-                        planes.push_back(c3ga::extractDualPlaneMatrix(obj));
+                        planes.push_back({c3ga::extractDualPlaneMatrix(obj), 
+                                          {0.0, 1.0, 0.0, 0.1}});
                     break;
                 }
 
                 // Lines
                 case c3ga::MvecType::Line: {
                     if ((int)m_renderSettings.dualMode & (int)DualMode_Default)
-                        lines.push_back(c3ga::extractDualLineMatrix(obj.dual()));
+                        lines.push_back({c3ga::extractDualLineMatrix(obj.dual()), 
+                                         {1.0, 0.0, 1.0, 1.0}});
                     break;
                 }
                 case c3ga::MvecType::DualLine: {
                     if ((int)m_renderSettings.dualMode & (int)DualMode_Dual)
-                        lines.push_back(c3ga::extractDualLineMatrix(obj));
+                        lines.push_back({c3ga::extractDualLineMatrix(obj), 
+                                         {1.0, 0.0, 1.0, 1.0}});
                     break;
                 }
             }
@@ -215,34 +238,35 @@ void Renderer::BuildBatches(const LayerPtrArray& layers)
     LOG_DEBUG("Renderer: Point count %d", m_pointCount);
     auto vbo = m_points->GetVertexBuffers()[0];
     vbo->Bind();
-    vbo->SetData(points.data(), m_pointCount * sizeof(glm::vec3));
+    vbo->SetData(points.data(), m_pointCount * sizeof(PointData));
+    vbo->Unbind();
 
     m_spheres.instanceCount = spheres.size();
     LOG_DEBUG("Renderer: Sphere count %d", m_spheres.instanceCount);
     vbo = m_spheres.vertexArray->GetVertexBuffers()[1];
     vbo->Bind();
-    vbo->SetData(spheres.data(), m_spheres.instanceCount * sizeof(glm::mat4));
+    vbo->SetData(spheres.data(), m_spheres.instanceCount * sizeof(InstancedData));
     vbo->Unbind();
 
     m_circles.instanceCount = circles.size();
     LOG_DEBUG("Renderer: Circle count %d", m_circles.instanceCount);
     vbo = m_circles.vertexArray->GetVertexBuffers()[1];
     vbo->Bind();
-    vbo->SetData(circles.data(), m_circles.instanceCount * sizeof(glm::mat4));
+    vbo->SetData(circles.data(), m_circles.instanceCount * sizeof(InstancedData));
     vbo->Unbind();
 
     m_planes.instanceCount = planes.size();
     LOG_DEBUG("Renderer: Sphere count %d", m_planes.instanceCount);
     vbo = m_planes.vertexArray->GetVertexBuffers()[1];
     vbo->Bind();
-    vbo->SetData(planes.data(), m_planes.instanceCount * sizeof(glm::mat4));
+    vbo->SetData(planes.data(), m_planes.instanceCount * sizeof(InstancedData));
     vbo->Unbind();
 
     m_lines.instanceCount = lines.size();
     LOG_DEBUG("Renderer: Lines count %d", m_lines.instanceCount);
     vbo = m_lines.vertexArray->GetVertexBuffers()[1];
     vbo->Bind();
-    vbo->SetData(lines.data(), m_lines.instanceCount * sizeof(glm::mat4));
+    vbo->SetData(lines.data(), m_lines.instanceCount * sizeof(InstancedData));
     vbo->Unbind();
 
     m_isValid = true;

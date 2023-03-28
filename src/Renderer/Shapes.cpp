@@ -37,7 +37,8 @@ VertexArrayPtr InstanciableSphere(const float& radius,
     instancedBuffer->SetLayout({{"Transform[0]", 4, GL_FLOAT, false},
                                 {"Transform[1]", 4, GL_FLOAT, false},
                                 {"Transform[2]", 4, GL_FLOAT, false},
-                                {"Transform[3]", 4, GL_FLOAT, false}});
+                                {"Transform[3]", 4, GL_FLOAT, false},
+                                {"Color",        4, GL_FLOAT, false}});
 
     auto indexBuffer = IndexBuffer::Create(indices.data(), indices.size());
 
@@ -50,6 +51,7 @@ VertexArrayPtr InstanciableSphere(const float& radius,
     glVertexAttribDivisor(4, 1); 
     glVertexAttribDivisor(5, 1); 
     glVertexAttribDivisor(6, 1); 
+    glVertexAttribDivisor(7, 1); 
     vertexArray->Unbind();
 
     return vertexArray;
@@ -73,7 +75,8 @@ VertexArrayPtr InstanciableCircle(const float& radius, const uint32_t& subdivs)
     instancedBuffer->SetLayout({{"Transform[0]", 4, GL_FLOAT, false},
                                 {"Transform[1]", 4, GL_FLOAT, false},
                                 {"Transform[2]", 4, GL_FLOAT, false},
-                                {"Transform[3]", 4, GL_FLOAT, false}});
+                                {"Transform[3]", 4, GL_FLOAT, false},
+                                {"Color",        4, GL_FLOAT, false}});
 
     auto indexBuffer = IndexBuffer::Create(indices.data(), indices.size());
 
@@ -86,6 +89,7 @@ VertexArrayPtr InstanciableCircle(const float& radius, const uint32_t& subdivs)
     glVertexAttribDivisor(2, 1); 
     glVertexAttribDivisor(3, 1); 
     glVertexAttribDivisor(4, 1); 
+    glVertexAttribDivisor(5, 1); 
     vertexArray->Unbind();
 
     return vertexArray;
@@ -108,7 +112,8 @@ VertexArrayPtr InstanciablePlane(const float& width, const float& height)
     instancedBuffer->SetLayout({{"Transform[0]", 4, GL_FLOAT, false},
                                 {"Transform[1]", 4, GL_FLOAT, false},
                                 {"Transform[2]", 4, GL_FLOAT, false},
-                                {"Transform[3]", 4, GL_FLOAT, false}});
+                                {"Transform[3]", 4, GL_FLOAT, false},
+                                {"Color",        4, GL_FLOAT, false}});
 
     auto indexBuffer = IndexBuffer::Create(indices.data(), indices.size());
 
@@ -121,6 +126,7 @@ VertexArrayPtr InstanciablePlane(const float& width, const float& height)
     glVertexAttribDivisor(4, 1); 
     glVertexAttribDivisor(5, 1); 
     glVertexAttribDivisor(6, 1); 
+    glVertexAttribDivisor(7, 1); 
     vertexArray->Unbind();
 
     return vertexArray;
@@ -139,7 +145,8 @@ VertexArrayPtr InstanciableLine(const float& length)
     instancedBuffer->SetLayout({{"Transform[0]", 4, GL_FLOAT, false},
                                 {"Transform[1]", 4, GL_FLOAT, false},
                                 {"Transform[2]", 4, GL_FLOAT, false},
-                                {"Transform[3]", 4, GL_FLOAT, false}});
+                                {"Transform[3]", 4, GL_FLOAT, false},
+                                {"Color",        4, GL_FLOAT, false}});
 
     auto indexBuffer = IndexBuffer::Create(indices.data(), indices.size());
 
@@ -152,6 +159,7 @@ VertexArrayPtr InstanciableLine(const float& length)
     glVertexAttribDivisor(2, 1); 
     glVertexAttribDivisor(3, 1); 
     glVertexAttribDivisor(4, 1); 
+    glVertexAttribDivisor(5, 1); 
     vertexArray->Unbind();
 
     return vertexArray;
