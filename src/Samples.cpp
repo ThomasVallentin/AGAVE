@@ -87,4 +87,52 @@ void LoadCompleteExample(const LayerStackPtr& layerStack)
 }
 
 
+void LoadSynthWaveExample(const LayerStackPtr& layerStack)
+{
+    if (!layerStack)
+        return;
+    
+    layerStack->Clear();
+
+    auto spheres = layerStack->NewRandomGenerator("RandomSpheres", c3ga::MvecType::Sphere, 25, 5.0);
+    std::dynamic_pointer_cast<Explicit>(spheres->GetProvider())->SetAnimated(true);
+    spheres->SetVisible(false);
+
+    MvecArray objects;
+    for (double y=-1 ; y < 1 ; y += 0.2)
+    {
+        objects.push_back(c3ga::point<double>(2, y, 0) ^
+                          c3ga::point<double>(1, y, 1) ^
+                          c3ga::point<double>(3, y, 4) ^
+                          c3ga::ei<double>());
+    }
+
+    auto planes = layerStack->NewLayer("Planes", objects);
+    planes->SetVisible(false);
+
+    auto circles = layerStack->NewCombination("Circles", spheres, planes, Operators::OuterProduct);
+    circles->SetDual(true);
+    circles->SetSourceDual(0, true);
+    circles->SetSourceDual(1, true);
+    circles->SetVisible(false);
+
+    objects = {c3ga::point<double>(2, -2, 0) ^
+               c3ga::point<double>(1, -1, 1) ^
+               c3ga::point<double>(2, -2, 4) ^
+               c3ga::ei<double>()};
+    auto plane2 = layerStack->NewLayer("Plane_2", objects);
+    plane2->SetVisible(false);
+
+    auto pairPoints = layerStack->NewCombination("PairPoints", circles, plane2, Operators::OuterProduct);
+    pairPoints->SetDual(true);
+    pairPoints->SetSourceDual(0, true);
+    pairPoints->SetSourceDual(1, true);
+
+    auto lines = layerStack->NewCombination("PairPoints", planes, plane2, Operators::OuterProduct);
+    lines->SetDual(true);
+    lines->SetSourceDual(0, true);
+    lines->SetSourceDual(1, true);
+}
+
+
 }

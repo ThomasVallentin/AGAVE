@@ -67,7 +67,7 @@ public:
                     const float& extents=1.0f) : 
            m_objType(objType), 
            m_count(count),
-           m_extents(1.0) {}
+           m_extents(extents) {}
 
     inline c3ga::MvecType GetObjectType() const { return m_objType; }
     inline void SetObjectType(const c3ga::MvecType& objType) { m_objType = objType; m_isDirty = true; }

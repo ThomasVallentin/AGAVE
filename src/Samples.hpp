@@ -10,6 +10,7 @@ namespace Samples {
     void LoadSpheresIntersect(const LayerStackPtr& layerStack); 
     void LoadPlanesIntersect(const LayerStackPtr& layerStack); 
     void LoadCompleteExample(const LayerStackPtr& layerStack); 
+    void LoadSynthWaveExample(const LayerStackPtr& layerStack); 
 
 }
 

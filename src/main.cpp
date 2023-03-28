@@ -55,7 +55,6 @@ int main(int argc, char* argv[])
     SimulationEngine& simEngine = SimulationEngine::Init();
 
     LayerStackPtr layerStack = std::make_shared<LayerStack>();
-    Samples::LoadCompleteExample(layerStack);
 
     Renderer renderer;
     RenderSettings& renderSettings = renderer.GetRenderSettings();
@@ -150,12 +149,23 @@ int main(int argc, char* argv[])
 
                 if(ImGui::BeginMenu("  Open sample##FileMenuOpenSamples")) 
                 {
+                    ImGui::PushStyleColor(ImGuiCol_Text, {0.6, 0.6, 0.6, 1.0});
+                    ImGui::SeparatorText("Basic Examples");
+                    ImGui::PopStyleColor();
+
                     if(ImGui::MenuItem("  Spheres intersection##FileMenuLoadSpheresIntersect")) 
                         Samples::LoadSpheresIntersect(layerStack);
                     if(ImGui::MenuItem("  Planes intersection##FileMenuLoadPlanesIntersect")) 
                         Samples::LoadPlanesIntersect(layerStack);
-                    if(ImGui::MenuItem("  Complete example##FileMenuLoadCompleteExample")) 
+                    if(ImGui::MenuItem("  Combinations example##FileMenuLoadCombinationExample")) 
                         Samples::LoadCompleteExample(layerStack);
+
+                    ImGui::PushStyleColor(ImGuiCol_Text, {0.6, 0.6, 0.6, 1.0});
+                    ImGui::SeparatorText("Let's rock");
+                    ImGui::PopStyleColor();
+                    
+                    if(ImGui::MenuItem("  SynthWave vibes##FileMenuLoadSynthWaveExample")) 
+                        Samples::LoadSynthWaveExample(layerStack);
 
                     ImGui::EndMenu();
                 }
@@ -218,10 +228,15 @@ int main(int argc, char* argv[])
             ImGui::SetNextWindowSize({120.0f, -1});
             if (ImGui::BeginMenu("Display"))
             {
-                ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(4, 8));
+                ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(4, 6));
+
+                ImGui::PushStyleColor(ImGuiCol_Text, {0.6, 0.6, 0.6, 1.0});
                 ImGui::SeparatorText("Dual Mode");
+                ImGui::PopStyleColor();
+
                 ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, -2));
                 ImGui::PushStyleVar(ImGuiStyleVar_ItemInnerSpacing, ImVec2(8, 8));
+
                 if (ImGui::RadioButton("Default##DisplayMenuDefault", 
                                        renderSettings.dualMode == DualMode_Default)){
                     renderSettings.dualMode = DualMode_Default;
