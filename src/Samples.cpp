@@ -120,7 +120,8 @@ void LoadSynthWaveExample(const LayerStackPtr& layerStack)
                c3ga::point<double>(1, -1, 1) ^
                c3ga::point<double>(2, -2, 4) ^
                c3ga::ei<double>()};
-    auto plane2 = layerStack->NewLayer("Plane_2", objects);
+    auto plane2 = layerStack->NewLayer("Plane", objects);
+    std::dynamic_pointer_cast<Explicit>(plane2->GetProvider())->SetAnimated(true);
     plane2->SetVisible(false);
 
     auto pairPoints = layerStack->NewCombination("PairPoints", circles, plane2, Operators::OuterProduct);
@@ -132,6 +133,45 @@ void LoadSynthWaveExample(const LayerStackPtr& layerStack)
     lines->SetDual(true);
     lines->SetSourceDual(0, true);
     lines->SetSourceDual(1, true);
+}
+
+
+void LoadDiscoPartyExample(const LayerStackPtr& layerStack)
+{
+    if (!layerStack)
+        return;
+    
+    layerStack->Clear();
+
+    auto planes = layerStack->NewRandomGenerator("RandomPlanes", c3ga::MvecType::Plane, 8, 1.0);
+
+    MvecArray objects = {c3ga::dualSphere<double>(0.0, 0.0, 0.0, 1.0).dual()};
+    auto sphere = layerStack->NewLayer("Sphere", objects);
+
+    auto circles = layerStack->NewCombination("Circles", sphere, planes, Operators::OuterProduct);
+    circles->SetDual(true);
+    circles->SetSourceDual(0, true);
+    circles->SetSourceDual(1, true);
+
+    auto lines = layerStack->NewSelfCombination("Lasers", circles, 1);
+    std::dynamic_pointer_cast<SelfCombination>(lines->GetProvider())->SetProductWithEi(true);
+    lines->SetSourceDual(0, true);
+
+    objects = {c3ga::point<double>(2, -1, 0) ^
+               c3ga::point<double>(1, -1, 1) ^
+               c3ga::point<double>(2, -1, 4) ^
+               c3ga::ei<double>()};
+    auto plane = layerStack->NewLayer("Plane", objects);
+
+    auto flatPoints = layerStack->NewCombination("FlatPoints", lines, plane, Operators::OuterProduct);
+    flatPoints->SetDual(true);
+    flatPoints->SetSourceDual(0, true);
+    flatPoints->SetSourceDual(1, true);
+
+    objects = {c3ga::point<double>(4, 3.5, 0), c3ga::point<double>(-4, 2.5, 0)};
+    auto points = layerStack->NewLayer("SpotLightsPoints", objects);
+
+    auto spots = layerStack->NewCombination("SpotLights", points, flatPoints, Operators::OuterProduct);
 }
 
 

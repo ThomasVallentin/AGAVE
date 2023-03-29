@@ -164,8 +164,11 @@ int main(int argc, char* argv[])
                     ImGui::SeparatorText("Let's rock");
                     ImGui::PopStyleColor();
                     
-                    if(ImGui::MenuItem("  SynthWave vibes##FileMenuLoadSynthWaveExample")) 
+                    if(ImGui::MenuItem("  Synthwave vibes##FileMenuLoadSynthWaveExample")) 
                         Samples::LoadSynthWaveExample(layerStack);
+
+                    if(ImGui::MenuItem("  Disco party##FileMenuLoadDiscoPartyExample")) 
+                        Samples::LoadDiscoPartyExample(layerStack);
 
                     ImGui::EndMenu();
                 }

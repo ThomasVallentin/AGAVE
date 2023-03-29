@@ -11,6 +11,7 @@ namespace Samples {
     void LoadPlanesIntersect(const LayerStackPtr& layerStack); 
     void LoadCompleteExample(const LayerStackPtr& layerStack); 
     void LoadSynthWaveExample(const LayerStackPtr& layerStack); 
+    void LoadDiscoPartyExample(const LayerStackPtr& layerStack); 
 
 }
 
