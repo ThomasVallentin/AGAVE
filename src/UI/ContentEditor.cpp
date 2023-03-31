@@ -2,7 +2,6 @@
 
 #include "Resources.hpp"
 #include "Buttons.hpp"
-#include "Icons.hpp"
 
 #include "Base/Inputs.h"
 #include "Base/Logging.h"

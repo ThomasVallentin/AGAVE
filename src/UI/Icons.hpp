@@ -3,6 +3,7 @@
 // for use with https://github.com/FortAwesome/Font-Awesome/blob/6.x/webfonts/fa-regular-400.ttf, https://github.com/FortAwesome/Font-Awesome/blob/6.x/webfonts/fa-solid-900.ttf
 #pragma once
 
+#define IMGUI_DEFINE_MATH_OPERATORS
 #include <imgui.h>
 
 enum class IconSize

@@ -1,9 +1,5 @@
 #include "Buttons.hpp"
 
-#include "Icons.hpp"
-
-#include <iostream>
-#include <iostream>
 
 namespace ImGui {
 
