@@ -7,7 +7,7 @@
 
 [![Demo](https://user-images.githubusercontent.com/43669549/228780772-f63ac6d8-2f67-44ed-93f0-40e8f85d3ea9.png)](https://youtu.be/BwJDvLdODqc)
 
-<div align="center">Click on the image above to watch a quick demo of the project !</div>
+*<div align="center">Click on the image above to watch a quick demo of the project !</div>*
 
 ## Dependencies
 
